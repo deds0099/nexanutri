@@ -1,0 +1,218 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import logoNexa from "@/assets/logo-nexa.png";
+
+const objetivos = [
+  { id: "emagrecer", label: "Emagrecer", emoji: "🔥" },
+  { id: "manter", label: "Manter peso", emoji: "⚖️" },
+  { id: "ganhar", label: "Ganhar massa", emoji: "💪" },
+];
+
+const restricoes = [
+  { id: "nenhuma", label: "Nenhuma" },
+  { id: "vegetariano", label: "Vegetariano" },
+  { id: "vegano", label: "Vegano" },
+  { id: "lactose", label: "Sem lactose" },
+  { id: "gluten", label: "Sem glúten" },
+];
+
+const Dieta = () => {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({
+    nome: "",
+    idade: "",
+    peso: "",
+    altura: "",
+    objetivo: "",
+    restricao: "",
+  });
+
+  const handleNext = () => {
+    if (step === 1 && (!formData.nome || !formData.idade)) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+    if (step === 2 && (!formData.peso || !formData.altura)) {
+      toast.error("Preencha peso e altura");
+      return;
+    }
+    if (step === 3 && !formData.objetivo) {
+      toast.error("Selecione um objetivo");
+      return;
+    }
+    if (step < 4) {
+      setStep(step + 1);
+    } else {
+      toast.success("Dieta sendo gerada...");
+      setTimeout(() => {
+        navigate("/minha-dieta");
+      }, 1500);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-hero py-8 px-4">
+      <div className="container mx-auto max-w-lg">
+        <button
+          onClick={() => step > 1 ? setStep(step - 1) : navigate("/")}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors"
+        >
+          <ArrowLeft size={20} />
+          {step > 1 ? "Voltar" : "Início"}
+        </button>
+
+        <motion.div
+          key={step}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          className="bg-card rounded-3xl shadow-card p-8 border border-border"
+        >
+          <div className="text-center mb-8">
+            <img src={logoNexa} alt="NexaNutri" className="w-16 h-16 mx-auto mb-4" />
+            <div className="flex justify-center gap-2 mb-4">
+              {[1, 2, 3, 4].map((s) => (
+                <div
+                  key={s}
+                  className={`w-3 h-3 rounded-full transition-colors ${
+                    s <= step ? "bg-primary" : "bg-border"
+                  }`}
+                />
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground">Passo {step} de 4</p>
+          </div>
+
+          {step === 1 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-foreground text-center mb-6">
+                Vamos nos conhecer?
+              </h2>
+              <div>
+                <Label htmlFor="nome">Qual seu nome?</Label>
+                <Input
+                  id="nome"
+                  placeholder="Seu nome"
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="idade">Qual sua idade?</Label>
+                <Input
+                  id="idade"
+                  type="number"
+                  placeholder="Ex: 25"
+                  value={formData.idade}
+                  onChange={(e) => setFormData({ ...formData, idade: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-foreground text-center mb-6">
+                Suas medidas
+              </h2>
+              <div>
+                <Label htmlFor="peso">Peso atual (kg)</Label>
+                <Input
+                  id="peso"
+                  type="number"
+                  placeholder="Ex: 70"
+                  value={formData.peso}
+                  onChange={(e) => setFormData({ ...formData, peso: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="altura">Altura (cm)</Label>
+                <Input
+                  id="altura"
+                  type="number"
+                  placeholder="Ex: 175"
+                  value={formData.altura}
+                  onChange={(e) => setFormData({ ...formData, altura: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-foreground text-center mb-6">
+                Qual seu objetivo?
+              </h2>
+              <div className="grid gap-3">
+                {objetivos.map((obj) => (
+                  <button
+                    key={obj.id}
+                    onClick={() => setFormData({ ...formData, objetivo: obj.id })}
+                    className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
+                      formData.objetivo === obj.id
+                        ? "border-primary bg-secondary"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <span className="text-2xl">{obj.emoji}</span>
+                    <span className="font-medium text-foreground">{obj.label}</span>
+                    {formData.objetivo === obj.id && (
+                      <Check size={20} className="text-primary ml-auto" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-foreground text-center mb-6">
+                Alguma restrição alimentar?
+              </h2>
+              <div className="grid gap-3">
+                {restricoes.map((res) => (
+                  <button
+                    key={res.id}
+                    onClick={() => setFormData({ ...formData, restricao: res.id })}
+                    className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
+                      formData.restricao === res.id
+                        ? "border-primary bg-secondary"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <span className="font-medium text-foreground">{res.label}</span>
+                    {formData.restricao === res.id && (
+                      <Check size={20} className="text-primary ml-auto" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <Button
+            onClick={handleNext}
+            className="w-full mt-8 bg-primary text-primary-foreground hover:bg-primary/90 py-6 rounded-xl font-semibold group"
+          >
+            {step === 4 ? "Gerar minha dieta" : "Continuar"}
+            <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
+          </Button>
+        </motion.div>
+      </div>
+    </div>
+  );
+};
+
+export default Dieta;
