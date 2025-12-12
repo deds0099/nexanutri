@@ -16,11 +16,26 @@ export interface Subscription {
     endDate: Date;
 }
 
+export interface MealItem {
+    name: string;
+    time: string;
+    items: string[];
+    calories: number;
+}
+
+export interface DietPlan {
+    calories: number;
+    objective: string;
+    meals: MealItem[];
+    generatedAt: Date;
+}
+
 interface UserData {
     email: string;
     name: string;
     createdAt: Date;
     subscription?: Subscription;
+    diet?: DietPlan;
 }
 
 interface AuthContextType {
@@ -46,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const userDoc = await getDoc(doc(db, "users", uid));
             if (userDoc.exists()) {
                 const data = userDoc.data();
+
                 // Helper segura para datas
                 const parseDate = (dateVal: any) => {
                     if (!dateVal) return new Date();
@@ -63,36 +79,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     endDate: parseDate(data.subscription.endDate),
                 } : undefined;
 
+                const diet = data.diet ? {
+                    ...data.diet,
+                    generatedAt: parseDate(data.diet.generatedAt),
+                } : undefined;
+
                 setUserData({
                     email: data.email,
                     name: data.name,
                     createdAt: parseDate(data.createdAt),
                     subscription,
+                    diet,
                 });
             }
         } catch (error) {
             console.error("Erro ao buscar dados do usuário:", error);
         }
     };
-
-    // Debug effect
-    useEffect(() => {
-        if (userData) {
-            console.log("DEBUG: UserData carregado:", userData);
-            console.log("DEBUG: Subscription:", userData.subscription);
-
-            if (userData.subscription) {
-                const now = new Date();
-                const endDate = userData.subscription.endDate;
-                console.log("DEBUG: Comparação de datas:", {
-                    now: now.toISOString(),
-                    endDate: endDate instanceof Date ? endDate.toISOString() : endDate,
-                    isActive: userData.subscription.status === "active",
-                    isDateValid: endDate > now
-                });
-            }
-        }
-    }, [userData]);
 
     const refreshUserData = async () => {
         if (user) {
@@ -113,6 +116,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         return () => unsubscribe();
     }, []);
+
+    // Debug effect
+    useEffect(() => {
+        if (userData) {
+            console.log("DEBUG: UserData carregado:", userData);
+
+            if (userData.subscription) {
+                const now = new Date();
+                const endDate = userData.subscription.endDate;
+                const status = userData.subscription.status?.toLowerCase() || "";
+
+                console.log("DEBUG: Comparação de datas:", {
+                    now: now.toISOString(),
+                    endDate: endDate instanceof Date ? endDate.toISOString() : endDate,
+                    isActive: status === "active",
+                    isDateValid: endDate > now
+                });
+            }
+        }
+    }, [userData]);
 
     const signIn = async (email: string, password: string) => {
         await signInWithEmailAndPassword(auth, email, password);
@@ -140,9 +163,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const now = new Date();
         const endDate = userData.subscription.endDate;
         const status = userData.subscription.status?.toLowerCase() || "";
-
-        // Debug simples
-        console.log(`Status: ${status}, Expira em: ${endDate}`);
 
         return status === "active" && endDate > now;
     };

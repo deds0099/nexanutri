@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import logoNexa from "@/assets/logo-nexa.png";
+import { useAuth } from "@/contexts/AuthContext";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const objetivos = [
   { id: "emagrecer", label: "Emagrecer", emoji: "🔥" },
@@ -22,21 +25,95 @@ const restricoes = [
   { id: "gluten", label: "Sem glúten" },
 ];
 
+const generos = [
+  { id: "masculino", label: "Masculino", emoji: "👨" },
+  { id: "feminino", label: "Feminino", emoji: "👩" },
+];
+
 const Dieta = () => {
   const navigate = useNavigate();
+  const { user, refreshUserData } = useAuth();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     nome: "",
     idade: "",
     peso: "",
     altura: "",
+    sexo: "",
     objetivo: "",
     restricao: "",
   });
 
-  const handleNext = () => {
-    if (step === 1 && (!formData.nome || !formData.idade)) {
-      toast.error("Preencha todos os campos");
+  const generateDiet = () => {
+    const peso = parseFloat(formData.peso);
+    const altura = parseFloat(formData.altura);
+    const idade = parseInt(formData.idade);
+
+    // Cálculo TMB (Harris-Benedict Revisada)
+    let tmb = 0;
+    if (formData.sexo === "masculino") {
+      tmb = 88.36 + (13.4 * peso) + (4.8 * altura) - (5.7 * idade);
+    } else {
+      tmb = 447.6 + (9.2 * peso) + (3.1 * altura) - (4.3 * idade);
+    }
+
+    // Nível de atividade (Considerando levemente ativo como base 1.375)
+    const tdee = tmb * 1.375;
+
+    // Ajuste por objetivo
+    let targetCalories = tdee;
+    if (formData.objetivo === "emagrecer") targetCalories -= 500;
+    if (formData.objetivo === "ganhar") targetCalories += 500;
+
+    targetCalories = Math.round(targetCalories);
+
+    // Distribuição das refeições
+    // Café: 25%, Lanche1: 10%, Almoço: 35%, Lanche2: 10%, Jantar: 20%
+
+    const meals = [
+      {
+        name: "Café da Manhã",
+        time: "07:30",
+        calories: Math.round(targetCalories * 0.25),
+        items: [`2 ovos mexidos`, `1 fatia de pão integral`, `1 fruta média`, `Café ou chá sem açúcar`]
+      },
+      {
+        name: "Lanche da Manhã",
+        time: "10:30",
+        calories: Math.round(targetCalories * 0.10),
+        items: [`1 iogurte natural`, `15g de castanhas`]
+      },
+      {
+        name: "Almoço",
+        time: "13:00",
+        calories: Math.round(targetCalories * 0.35),
+        items: [`${Math.round(targetCalories * 0.05)}g de arroz integral`, `${Math.round(targetCalories * 0.04)}g de feijão`, `${Math.round(targetCalories * 0.08)}g de proteína (frango/peixe)`, `Salada à vontade`]
+      },
+      {
+        name: "Lanche da Tarde",
+        time: "16:00",
+        calories: Math.round(targetCalories * 0.10),
+        items: [`1 fruta`, `1 scoop de whey ou 2 ovos`]
+      },
+      {
+        name: "Jantar",
+        time: "19:30",
+        calories: Math.round(targetCalories * 0.20),
+        items: [`Legumes cozidos`, `${Math.round(targetCalories * 0.06)}g de proteína`, `Azeite de oliva`]
+      }
+    ];
+
+    return {
+      calories: targetCalories,
+      objective: formData.objetivo,
+      meals,
+      generatedAt: new Date()
+    };
+  };
+
+  const handleNext = async () => {
+    if (step === 1 && (!formData.nome || !formData.idade || !formData.sexo)) {
+      toast.error("Preencha todos os campos e selecione o sexo");
       return;
     }
     if (step === 2 && (!formData.peso || !formData.altura)) {
@@ -50,10 +127,36 @@ const Dieta = () => {
     if (step < 4) {
       setStep(step + 1);
     } else {
-      toast.success("Dieta sendo gerada...");
-      setTimeout(() => {
-        navigate("/minha-dieta");
-      }, 1500);
+      if (!user) {
+        toast.error("Erro: Usuário não autenticado");
+        return;
+      }
+
+      try {
+        toast.info("Calculando sua dieta personalizada...");
+        const dietPlan = generateDiet();
+
+        await updateDoc(doc(db, "users", user.uid), {
+          diet: dietPlan,
+          // Atualizar também dados antropométricos se quiser
+          peso: formData.peso,
+          altura: formData.altura,
+          idade: formData.idade,
+          sexo: formData.sexo,
+          objetivo: formData.objetivo
+        });
+
+        await refreshUserData();
+
+        toast.success("Dieta gerada com sucesso!");
+        setTimeout(() => {
+          navigate("/minha-dieta");
+        }, 1000);
+
+      } catch (error) {
+        console.error("Erro ao salvar dieta:", error);
+        toast.error("Erro ao salvar sua dieta");
+      }
     }
   };
 
@@ -81,9 +184,8 @@ const Dieta = () => {
               {[1, 2, 3, 4].map((s) => (
                 <div
                   key={s}
-                  className={`w-3 h-3 rounded-full transition-colors ${
-                    s <= step ? "bg-primary" : "bg-border"
-                  }`}
+                  className={`w-3 h-3 rounded-full transition-colors ${s <= step ? "bg-primary" : "bg-border"
+                    }`}
                 />
               ))}
             </div>
@@ -159,11 +261,10 @@ const Dieta = () => {
                   <button
                     key={obj.id}
                     onClick={() => setFormData({ ...formData, objetivo: obj.id })}
-                    className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
-                      formData.objetivo === obj.id
-                        ? "border-primary bg-secondary"
-                        : "border-border hover:border-primary/50"
-                    }`}
+                    className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${formData.objetivo === obj.id
+                      ? "border-primary bg-secondary"
+                      : "border-border hover:border-primary/50"
+                      }`}
                   >
                     <span className="text-2xl">{obj.emoji}</span>
                     <span className="font-medium text-foreground">{obj.label}</span>
@@ -186,11 +287,10 @@ const Dieta = () => {
                   <button
                     key={res.id}
                     onClick={() => setFormData({ ...formData, restricao: res.id })}
-                    className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
-                      formData.restricao === res.id
-                        ? "border-primary bg-secondary"
-                        : "border-border hover:border-primary/50"
-                    }`}
+                    className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${formData.restricao === res.id
+                      ? "border-primary bg-secondary"
+                      : "border-border hover:border-primary/50"
+                      }`}
                   >
                     <span className="font-medium text-foreground">{res.label}</span>
                     {formData.restricao === res.id && (

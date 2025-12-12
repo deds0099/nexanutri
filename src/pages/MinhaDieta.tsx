@@ -12,38 +12,7 @@ import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-const refeicoes = [
-  {
-    nome: "Café da manhã",
-    horario: "07:00",
-    itens: ["2 ovos mexidos", "1 fatia de pão integral", "1 banana", "Café sem açúcar"],
-    calorias: 350,
-  },
-  {
-    nome: "Lanche da manhã",
-    horario: "10:00",
-    itens: ["1 maçã", "10 amêndoas"],
-    calorias: 150,
-  },
-  {
-    nome: "Almoço",
-    horario: "12:30",
-    itens: ["150g de frango grelhado", "4 colheres de arroz integral", "Salada verde à vontade", "1 colher de azeite"],
-    calorias: 500,
-  },
-  {
-    nome: "Lanche da tarde",
-    horario: "15:30",
-    itens: ["Iogurte natural", "1 colher de granola"],
-    calorias: 180,
-  },
-  {
-    nome: "Jantar",
-    horario: "19:00",
-    itens: ["150g de peixe assado", "Legumes refogados", "Batata doce média"],
-    calorias: 420,
-  },
-];
+
 
 const getIMCClassification = (imc: number) => {
   if (imc < 18.5) return { label: "Abaixo do peso", color: "text-yellow-500", bg: "bg-yellow-500" };
@@ -64,7 +33,11 @@ const MinhaDieta = () => {
   const [altura, setAltura] = useState("");
   const [imcResultado, setImcResultado] = useState<number | null>(null);
 
-  const totalCalorias = refeicoes.reduce((acc, ref) => acc + ref.calorias, 0);
+  // Diet Data
+  const diet = userData?.diet;
+  const refeicoes = diet?.meals || [];
+  const totalCalorias = diet?.calories || 0;
+  const hasDiet = refeicoes.length > 0;
 
   const handleLogout = async () => {
     await signOut();
@@ -178,7 +151,7 @@ const MinhaDieta = () => {
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-foreground">Sua Dieta Diária</h2>
-                      <p className="text-muted-foreground">Meta: Perda de Peso</p>
+                      <p className="text-muted-foreground">Meta: <span className="capitalize">{diet?.objective || "Personalizado"}</span></p>
                     </div>
                   </div>
                   <div className="text-center md:text-right bg-secondary/50 p-4 rounded-xl">
@@ -188,33 +161,42 @@ const MinhaDieta = () => {
                 </div>
 
                 <div className="space-y-6">
-                  {refeicoes.map((refeicao, index) => (
-                    <div key={index} className="flex flex-col md:flex-row gap-4 p-4 rounded-xl hover:bg-secondary/20 transition-colors border border-transparent hover:border-border">
-                      <div className="flex-shrink-0 flex md:flex-col items-center gap-3 md:w-24">
-                        <div className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center">
-                          <Utensils className="text-primary" size={18} />
-                        </div>
-                        <span className="text-sm font-bold text-muted-foreground">{refeicao.horario}</span>
-                      </div>
-
-                      <div className="flex-grow">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-bold text-lg text-foreground">{refeicao.nome}</h3>
-                          <span className="text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-full">
-                            {refeicao.calorias} kcal
-                          </span>
-                        </div>
-                        <ul className="grid md:grid-cols-2 gap-2">
-                          {refeicao.itens.map((item, i) => (
-                            <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
-                              {item}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                  {!hasDiet ? (
+                    <div className="text-center py-10">
+                      <p className="text-muted-foreground mb-4">Você ainda não gerou seu plano alimentar.</p>
+                      <Button onClick={() => navigate("/dieta")} className="bg-primary text-white">
+                        Gerar Minha Dieta Agora
+                      </Button>
                     </div>
-                  ))}
+                  ) : (
+                    refeicoes.map((refeicao, index) => (
+                      <div key={index} className="flex flex-col md:flex-row gap-4 p-4 rounded-xl hover:bg-secondary/20 transition-colors border border-transparent hover:border-border">
+                        <div className="flex-shrink-0 flex md:flex-col items-center gap-3 md:w-24">
+                          <div className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center">
+                            <Utensils className="text-primary" size={18} />
+                          </div>
+                          <span className="text-sm font-bold text-muted-foreground">{refeicao.time}</span>
+                        </div>
+
+                        <div className="flex-grow">
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-bold text-lg text-foreground">{refeicao.name}</h3>
+                            <span className="text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-full">
+                              {refeicao.calories} kcal
+                            </span>
+                          </div>
+                          <ul className="grid md:grid-cols-2 gap-2">
+                            {refeicao.items.map((item, i) => (
+                              <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-border flex items-center justify-center gap-2 text-muted-foreground text-sm">
