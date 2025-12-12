@@ -218,6 +218,24 @@ const Dieta = () => {
                   className="mt-1"
                 />
               </div>
+              <div>
+                <Label htmlFor="sexo">Sexo biológico</Label>
+                <div className="grid grid-cols-2 gap-3 mt-1">
+                  {generos.map((g) => (
+                    <button
+                      key={g.id}
+                      onClick={() => setFormData({ ...formData, sexo: g.id })}
+                      className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition-all ${formData.sexo === g.id
+                          ? "border-primary bg-secondary"
+                          : "border-border hover:border-primary/50"
+                        }`}
+                    >
+                      <span className="text-xl">{g.emoji}</span>
+                      <span className="font-medium text-foreground">{g.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
