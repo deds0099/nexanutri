@@ -79,20 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     endDate: parseDate(data.subscription.endDate),
                 } : undefined;
 
-                // Debug logs para Dieta
-                console.log("DEBUG RAW FIRESTORE DATA:", data);
-                if (data.diet) {
-                    console.log("DEBUG RAW DIET:", data.diet);
-                } else {
-                    console.log("DEBUG: Sem campo 'diet' no Firestore");
-                }
-
                 const diet = data.diet ? {
                     ...data.diet,
                     generatedAt: parseDate(data.diet.generatedAt),
                 } : undefined;
-
-                console.log("DEBUG PROCESSED DIET:", diet);
 
                 setUserData({
                     email: data.email,
@@ -101,9 +91,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     subscription,
                     diet,
                 });
+            } else {
+                // Se o usuário existe no Auth mas não no Firestore (ex: erro na criação)
+                // Definimos um userData básico para não travar a aplicação
+                setUserData({
+                    email: auth.currentUser?.email || "",
+                    name: auth.currentUser?.displayName || "",
+                    createdAt: new Date(),
+                });
             }
         } catch (error) {
             console.error("Erro ao buscar dados do usuário:", error);
+            // Em caso de erro, também liberamos para não travar no loading infinito
+            setUserData({
+                email: auth.currentUser?.email || "",
+                name: auth.currentUser?.displayName || "",
+                createdAt: new Date(),
+            });
         }
     };
 
@@ -126,26 +130,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         return () => unsubscribe();
     }, []);
-
-    // Debug effect
-    useEffect(() => {
-        if (userData) {
-            console.log("DEBUG: UserData carregado:", userData);
-
-            if (userData.subscription) {
-                const now = new Date();
-                const endDate = userData.subscription.endDate;
-                const status = userData.subscription.status?.toLowerCase() || "";
-
-                console.log("DEBUG: Comparação de datas:", {
-                    now: now.toISOString(),
-                    endDate: endDate instanceof Date ? endDate.toISOString() : endDate,
-                    isActive: status === "active",
-                    isDateValid: endDate > now
-                });
-            }
-        }
-    }, [userData]);
 
     const signIn = async (email: string, password: string) => {
         await signInWithEmailAndPassword(auth, email, password);
