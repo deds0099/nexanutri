@@ -11,13 +11,18 @@ const PLAN_DURATION = {
 // Inicializar Firebase Admin
 if (getApps().length === 0) {
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-        initializeApp({
-            credential: cert(serviceAccount),
-        });
+        try {
+            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            initializeApp({
+                credential: cert(serviceAccount),
+            });
+        } catch (e) {
+            console.error("Failed to parse Service Account", e);
+        }
     } else {
+        // Fallback if needed or locally
         initializeApp({
-            projectId: 'nexanutri',
+            projectId: "nexanutri"
         });
     }
 }
@@ -53,10 +58,8 @@ export default async function handler(req, res) {
 
     try {
         const payload = req.body;
-
         console.log("Webhook recebido:", JSON.stringify(payload, null, 2));
 
-        // Tentar extrair informações do pagamento
         const paymentStatus = payload.data?.status || payload.payment?.status;
         const userEmail =
             payload.data?.metadata?.user_email ||
@@ -67,25 +70,18 @@ export default async function handler(req, res) {
             payload.custom_fields?.user_id;
         const plan =
             payload.data?.metadata?.plan ||
-            payload.custom_fields?.plan ||
             extractPlanFromProduct(payload.product?.name || payload.data?.additional_info?.items?.[0]?.title || "");
 
-        // Verificar se o pagamento foi aprovado
         const approvedStatuses = ["approved", "completed", "paid", "APPROVED", "COMPLETED", "PAID"];
         if (!approvedStatuses.includes(paymentStatus || "")) {
-            console.log(`Status de pagamento não aprovado: ${paymentStatus}`);
             return res.status(200).json({ received: true, action: "ignored", reason: "payment not approved" });
         }
 
-        // Precisamos do email ou userId para identificar o usuário
         if (!userEmail && !userId) {
-            console.error("Dados do usuário não encontrados no webhook");
             return res.status(400).json({ error: "user data not found" });
         }
 
-        // Buscar usuário pelo email ou ID
         let userDocRef = null;
-
         if (userId) {
             userDocRef = db.collection("users").doc(userId);
         } else if (userEmail) {
@@ -96,17 +92,14 @@ export default async function handler(req, res) {
         }
 
         if (!userDocRef) {
-            console.error(`Usuário não encontrado: ${userEmail || userId}`);
             return res.status(404).json({ error: "user not found" });
         }
 
-        // Calcular data de expiração
         const now = new Date();
         const durationMonths = PLAN_DURATION[plan] || 1;
         const endDate = new Date(now);
         endDate.setMonth(endDate.getMonth() + durationMonths);
 
-        // Atualizar assinatura do usuário
         await userDocRef.update({
             subscription: {
                 plan: plan,
@@ -116,17 +109,14 @@ export default async function handler(req, res) {
             },
         });
 
-        console.log(`Assinatura ativada para usuário: ${userEmail || userId}, plano: ${plan}, expira: ${endDate}`);
-
         return res.status(200).json({
             received: true,
             action: "subscription_activated",
-            plan: plan,
-            endDate: endDate.toISOString(),
+            plan: plan
         });
 
     } catch (error) {
-        console.error("Erro ao processar webhook:", error);
-        return res.status(500).json({ error: "internal error", details: error.message });
+        console.error("Erro webhook:", error);
+        return res.status(500).json({ error: "internal error" });
     }
 }
