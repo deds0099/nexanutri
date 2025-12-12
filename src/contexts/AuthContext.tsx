@@ -46,16 +46,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const userDoc = await getDoc(doc(db, "users", uid));
             if (userDoc.exists()) {
                 const data = userDoc.data();
+                // Helper segura para datas
+                const parseDate = (dateVal: any) => {
+                    if (!dateVal) return new Date();
+                    // Se for Timestamp do Firestore
+                    if (dateVal.toDate && typeof dateVal.toDate === 'function') {
+                        return dateVal.toDate();
+                    }
+                    // Se for string ou number
+                    return new Date(dateVal);
+                };
+
                 const subscription = data.subscription ? {
                     ...data.subscription,
-                    startDate: data.subscription.startDate?.toDate?.() || new Date(data.subscription.startDate),
-                    endDate: data.subscription.endDate?.toDate?.() || new Date(data.subscription.endDate),
+                    startDate: parseDate(data.subscription.startDate),
+                    endDate: parseDate(data.subscription.endDate),
                 } : undefined;
 
                 setUserData({
                     email: data.email,
                     name: data.name,
-                    createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+                    createdAt: parseDate(data.createdAt),
                     subscription,
                 });
             }
@@ -128,8 +139,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const now = new Date();
         const endDate = userData.subscription.endDate;
+        const status = userData.subscription.status?.toLowerCase() || "";
 
-        return userData.subscription.status === "active" && endDate > now;
+        // Debug simples
+        console.log(`Status: ${status}, Expira em: ${endDate}`);
+
+        return status === "active" && endDate > now;
     };
 
     return (
