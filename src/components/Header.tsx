@@ -1,13 +1,28 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import logoNexa from "@/assets/logo-nexa.png";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { user, userData, signOut, loading, hasActiveSubscription } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  const handleDashboard = () => {
+    if (hasActiveSubscription()) {
+      navigate("/dieta");
+    } else {
+      navigate("/assinatura");
+    }
+  };
 
   return (
     <motion.header
@@ -36,19 +51,47 @@ const Header = () => {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            className="text-muted-foreground hover:text-primary"
-            onClick={() => navigate("/auth")}
-          >
-            Login
-          </Button>
-          <Button 
-            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-soft"
-            onClick={() => navigate("/assinatura")}
-          >
-            Assinar agora
-          </Button>
+          {loading ? (
+            <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+          ) : user ? (
+            <>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <User size={18} />
+                <span className="text-sm">{userData?.name || user.email?.split('@')[0]}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDashboard}
+              >
+                {hasActiveSubscription() ? "Minha Dieta" : "Assinar"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <LogOut size={18} />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                className="text-muted-foreground hover:text-primary"
+                onClick={() => navigate("/auth")}
+              >
+                Login
+              </Button>
+              <Button
+                className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-soft"
+                onClick={() => navigate("/assinatura")}
+              >
+                Assinar agora
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -79,19 +122,44 @@ const Header = () => {
               FAQ
             </a>
             <div className="flex flex-col gap-2 pt-4 border-t border-border">
-              <Button 
-                variant="ghost" 
-                className="w-full justify-center"
-                onClick={() => navigate("/auth")}
-              >
-                Login
-              </Button>
-              <Button 
-                className="w-full bg-primary text-primary-foreground"
-                onClick={() => navigate("/assinatura")}
-              >
-                Assinar agora
-              </Button>
+              {user ? (
+                <>
+                  <div className="flex items-center gap-2 text-muted-foreground py-2">
+                    <User size={18} />
+                    <span className="text-sm">{userData?.name || user.email?.split('@')[0]}</span>
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={handleDashboard}
+                  >
+                    {hasActiveSubscription() ? "Minha Dieta" : "Assinar Plano"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleLogout}
+                  >
+                    <LogOut size={18} className="mr-2" />
+                    Sair
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-center"
+                    onClick={() => navigate("/auth")}
+                  >
+                    Login
+                  </Button>
+                  <Button
+                    className="w-full bg-primary text-primary-foreground"
+                    onClick={() => navigate("/assinatura")}
+                  >
+                    Assinar agora
+                  </Button>
+                </>
+              )}
             </div>
           </nav>
         </motion.div>
@@ -101,3 +169,4 @@ const Header = () => {
 };
 
 export default Header;
+
