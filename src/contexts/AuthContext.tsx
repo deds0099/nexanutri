@@ -79,10 +79,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     endDate: parseDate(data.subscription.endDate),
                 } : undefined;
 
+                // Debug logs para Dieta
+                console.log("DEBUG RAW FIRESTORE DATA:", data);
+                if (data.diet) {
+                    console.log("DEBUG RAW DIET:", data.diet);
+                } else {
+                    console.log("DEBUG: Sem campo 'diet' no Firestore");
+                }
+
                 const diet = data.diet ? {
                     ...data.diet,
                     generatedAt: parseDate(data.diet.generatedAt),
                 } : undefined;
+
+                console.log("DEBUG PROCESSED DIET:", diet);
 
                 setUserData({
                     email: data.email,
