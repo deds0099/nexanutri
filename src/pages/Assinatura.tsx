@@ -23,10 +23,11 @@ const plans = [
   {
     id: "semestral",
     name: "Semestral",
-    price: "13,33",
+    price: "7,99",
     period: "/mês",
     originalPrice: "59,94",
-    totalPrice: "79,99",
+    totalPrice: "47,94",
+    installments: "6x de R$7,99",
     duration: 6, // meses
     features: [
       "Tudo do plano mensal",
@@ -39,10 +40,11 @@ const plans = [
   {
     id: "anual",
     name: "Anual",
-    price: "5,00",
+    price: "5,99",
     period: "/mês",
     originalPrice: "119,88",
-    totalPrice: "59,99",
+    totalPrice: "71,88",
+    installments: "12x de R$5,99",
     duration: 12, // meses
     features: [
       "Tudo do plano semestral",
@@ -90,8 +92,8 @@ const Assinatura = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               className={`relative bg-card rounded-3xl p-8 border ${plan.popular
-                  ? "border-primary shadow-glow scale-105"
-                  : "border-border shadow-card"
+                ? "border-primary shadow-glow scale-105"
+                : "border-border shadow-card"
                 }`}
             >
               {plan.popular && (
@@ -128,8 +130,8 @@ const Assinatura = () => {
               <Button
                 onClick={() => navigate("/auth")}
                 className={`w-full py-6 rounded-xl font-semibold ${plan.popular
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                   }`}
               >
                 Assinar agora
