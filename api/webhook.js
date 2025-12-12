@@ -1,9 +1,8 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { getFirestore } from 'firebase-admin/firestore';
 
 // Duração dos planos em meses
-const PLAN_DURATION: Record<string, number> = {
+const PLAN_DURATION = {
     mensal: 1,
     semestral: 6,
     anual: 12,
@@ -17,7 +16,6 @@ if (getApps().length === 0) {
             credential: cert(serviceAccount),
         });
     } else {
-        // Fallback para desenvolvimento local
         initializeApp({
             projectId: 'nexanutri',
         });
@@ -26,47 +24,9 @@ if (getApps().length === 0) {
 
 const db = getFirestore();
 
-interface WebhookPayload {
-    event?: string;
-    type?: string;
-    data?: {
-        id?: string;
-        status?: string;
-        external_reference?: string;
-        payer?: {
-            email?: string;
-        };
-        metadata?: {
-            plan?: string;
-            user_email?: string;
-            user_id?: string;
-        };
-        additional_info?: {
-            items?: Array<{
-                title?: string;
-                description?: string;
-            }>;
-        };
-    };
-    // VegaCheckout format
-    customer?: {
-        email?: string;
-    };
-    payment?: {
-        status?: string;
-    };
-    product?: {
-        name?: string;
-    };
-    custom_fields?: {
-        plan?: string;
-        user_id?: string;
-    };
-}
-
 // Função auxiliar para extrair o plano do nome do produto
-function extractPlanFromProduct(productName: string): string {
-    const nameLower = productName.toLowerCase();
+function extractPlanFromProduct(productName) {
+    const nameLower = (productName || '').toLowerCase();
     if (nameLower.includes("anual") || nameLower.includes("annual")) {
         return "anual";
     } else if (nameLower.includes("semestral") || nameLower.includes("6 meses")) {
@@ -75,22 +35,28 @@ function extractPlanFromProduct(productName: string): string {
     return "mensal";
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
+    // Headers CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    // Handle OPTIONS request
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
     // Permitir apenas POST
     if (req.method !== "POST") {
         return res.status(405).json({ error: "Method Not Allowed" });
     }
 
-    // Headers CORS
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST');
-
     try {
-        const payload: WebhookPayload = req.body;
+        const payload = req.body;
 
         console.log("Webhook recebido:", JSON.stringify(payload, null, 2));
 
-        // Tentar extrair informações do pagamento (funciona com VegaCheckout e MercadoPago)
+        // Tentar extrair informações do pagamento
         const paymentStatus = payload.data?.status || payload.payment?.status;
         const userEmail =
             payload.data?.metadata?.user_email ||
@@ -118,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Buscar usuário pelo email ou ID
-        let userDocRef: FirebaseFirestore.DocumentReference | null = null;
+        let userDocRef = null;
 
         if (userId) {
             userDocRef = db.collection("users").doc(userId);
@@ -145,8 +111,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             subscription: {
                 plan: plan,
                 status: "active",
-                startDate: Timestamp.fromDate(now),
-                endDate: Timestamp.fromDate(endDate),
+                startDate: now,
+                endDate: endDate,
             },
         });
 
@@ -161,6 +127,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     } catch (error) {
         console.error("Erro ao processar webhook:", error);
-        return res.status(500).json({ error: "internal error" });
+        return res.status(500).json({ error: "internal error", details: error.message });
     }
 }
