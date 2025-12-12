@@ -26,7 +26,7 @@ const Auth = () => {
       if (userData === null) return;
 
       if (hasActiveSubscription()) {
-        navigate("/dieta");
+        navigate("/minha-dieta");
       } else {
         navigate("/assinatura");
       }
