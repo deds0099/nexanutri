@@ -64,6 +64,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    // Debug effect
+    useEffect(() => {
+        if (userData) {
+            console.log("DEBUG: UserData carregado:", userData);
+            console.log("DEBUG: Subscription:", userData.subscription);
+
+            if (userData.subscription) {
+                const now = new Date();
+                const endDate = userData.subscription.endDate;
+                console.log("DEBUG: Comparação de datas:", {
+                    now: now.toISOString(),
+                    endDate: endDate instanceof Date ? endDate.toISOString() : endDate,
+                    isActive: userData.subscription.status === "active",
+                    isDateValid: endDate > now
+                });
+            }
+        }
+    }, [userData]);
+
     const refreshUserData = async () => {
         if (user) {
             await fetchUserData(user.uid);
