@@ -11,6 +11,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { doc, updateDoc, deleteField } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 
 
@@ -48,6 +50,28 @@ const MinhaDieta = () => {
   const handleLogout = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const handleDeleteDiet = async () => {
+    if (!user) return;
+    try {
+      if (confirm("Tem certeza que deseja excluir seu plano alimentar atual?")) {
+        await updateDoc(doc(db, "users", user.uid), {
+          diet: deleteField()
+        });
+        await refreshUserData();
+        toast.success("Dieta excluída com sucesso!");
+      }
+    } catch (error) {
+      console.error("Erro ao excluir dieta:", error);
+      toast.error("Erro ao excluir dieta");
+    }
+  };
+
+  const handleRegenerateDiet = () => {
+    if (confirm("Isso irá substituir sua dieta atual por uma nova. Deseja continuar?")) {
+      navigate("/dieta");
+    }
   };
 
   const handleDownloadPDF = async () => {
@@ -94,12 +118,7 @@ const MinhaDieta = () => {
       <header className="bg-card border-b border-border sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* DEBUG VISUAL TEMPORÁRIO */}
-            <div className="fixed bottom-4 right-4 bg-black/80 text-white p-4 text-xs rounded z-50 max-w-sm overflow-auto max-h-48 border border-white/20 shadow-xl">
-              <p>Diet Exists: {hasDiet ? "YES" : "NO"}</p>
-              <p>Total Meals: {refeicoes.length}</p>
-              <pre>{JSON.stringify(diet, null, 2)}</pre>
-            </div>
+            {/* Debug UI removed */}
 
             <img src={logoNexa} alt="NexaNutri" className="w-10 h-10" />
             <div>
@@ -144,15 +163,36 @@ const MinhaDieta = () => {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-6"
             >
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleDownloadPDF}
-                  variant="outline"
-                  className="gap-2 border-primary text-primary hover:bg-primary/10"
-                >
-                  <Download size={18} />
-                  Baixar PDF
-                </Button>
+              <div className="flex flex-col sm:flex-row justify-between gap-4">
+                {hasDiet && (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleRegenerateDiet}
+                      variant="outline"
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      Gerar Novo Plano
+                    </Button>
+                    <Button
+                      onClick={handleDeleteDiet}
+                      variant="destructive"
+                      className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border-0"
+                    >
+                      Excluir
+                    </Button>
+                  </div>
+                )}
+
+                {hasDiet && (
+                  <Button
+                    onClick={handleDownloadPDF}
+                    variant="outline"
+                    className="gap-2 border-primary text-primary hover:bg-primary/10 w-full sm:w-auto ml-auto"
+                  >
+                    <Download size={18} />
+                    Baixar PDF
+                  </Button>
+                )}
               </div>
 
               {/* Área imprimível */}
