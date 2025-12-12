@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Calendar, Utensils, Download, Calculator, User, FileText, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,12 @@ const MinhaDieta = () => {
   const refeicoes = diet?.meals || [];
   const totalCalorias = diet?.calories || 0;
   const hasDiet = refeicoes.length > 0;
+
+  const { refreshUserData } = useAuth();
+
+  useEffect(() => {
+    refreshUserData();
+  }, []);
 
   const handleLogout = async () => {
     await signOut();
@@ -88,6 +94,13 @@ const MinhaDieta = () => {
       <header className="bg-card border-b border-border sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* DEBUG VISUAL TEMPORÁRIO */}
+            <div className="fixed bottom-4 right-4 bg-black/80 text-white p-4 text-xs rounded z-50 max-w-sm overflow-auto max-h-48 border border-white/20 shadow-xl">
+              <p>Diet Exists: {hasDiet ? "YES" : "NO"}</p>
+              <p>Total Meals: {refeicoes.length}</p>
+              <pre>{JSON.stringify(diet, null, 2)}</pre>
+            </div>
+
             <img src={logoNexa} alt="NexaNutri" className="w-10 h-10" />
             <div>
               <h1 className="text-lg font-bold text-foreground">
