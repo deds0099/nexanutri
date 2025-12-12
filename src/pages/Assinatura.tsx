@@ -3,6 +3,8 @@ import { Check, ArrowLeft, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import logoNexa from "@/assets/logo-nexa.png";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const plans = [
   {
@@ -11,7 +13,8 @@ const plans = [
     price: "9,99",
     period: "/mês",
     totalPrice: "9,99",
-    duration: 1, // meses
+    duration: 1,
+    checkoutUrl: "https://checkout.nexaapp.online/VCCL1O8SCM1E",
     features: [
       "Dieta personalizada",
       "Calculadora IMC",
@@ -28,7 +31,8 @@ const plans = [
     originalPrice: "59,94",
     totalPrice: "47,94",
     installments: "6x de R$7,99",
-    duration: 6, // meses
+    duration: 6,
+    checkoutUrl: "https://checkout.nexaapp.online/VCCL1O8SCM1F",
     features: [
       "Tudo do plano mensal",
       "Atualizações semanais",
@@ -45,7 +49,8 @@ const plans = [
     originalPrice: "119,88",
     totalPrice: "71,88",
     installments: "12x de R$5,99",
-    duration: 12, // meses
+    duration: 12,
+    checkoutUrl: "https://checkout.nexaapp.online/VCCL1O8SCM1G",
     features: [
       "Tudo do plano semestral",
       "Consulta com nutricionista",
@@ -58,6 +63,23 @@ const plans = [
 
 const Assinatura = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleSubscribe = (plan: typeof plans[0]) => {
+    if (!user) {
+      toast.info("Faça login para continuar com a assinatura");
+      navigate("/auth");
+      return;
+    }
+
+    // Redirecionar para o checkout com o email do usuário
+    const checkoutUrl = new URL(plan.checkoutUrl);
+    if (user.email) {
+      checkoutUrl.searchParams.set("email", user.email);
+    }
+
+    window.open(checkoutUrl.toString(), "_blank");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-hero py-8 px-4">
@@ -82,6 +104,11 @@ const Assinatura = () => {
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
             Comece sua transformação hoje mesmo. Cancele quando quiser.
           </p>
+          {user && (
+            <p className="text-sm text-primary mt-2">
+              Logado como: {user.email}
+            </p>
+          )}
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-6">
@@ -108,7 +135,12 @@ const Assinatura = () => {
               <div className="mb-6">
                 <span className="text-4xl font-bold text-primary">R${plan.price}</span>
                 <span className="text-muted-foreground">{plan.period}</span>
-                {plan.totalPrice && (
+                {plan.installments && (
+                  <p className="text-sm text-primary font-semibold mt-1">
+                    {plan.installments}
+                  </p>
+                )}
+                {plan.totalPrice && plan.originalPrice && (
                   <p className="text-sm text-muted-foreground mt-1">
                     <span className="line-through">R${plan.originalPrice}</span>{" "}
                     <span className="text-primary font-semibold">R${plan.totalPrice} total</span>
@@ -128,7 +160,7 @@ const Assinatura = () => {
               </ul>
 
               <Button
-                onClick={() => navigate("/auth")}
+                onClick={() => handleSubscribe(plan)}
                 className={`w-full py-6 rounded-xl font-semibold ${plan.popular
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
@@ -154,3 +186,4 @@ const Assinatura = () => {
 };
 
 export default Assinatura;
+
