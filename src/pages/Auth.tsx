@@ -17,18 +17,21 @@ const Auth = () => {
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { signIn, signUp, user, hasActiveSubscription } = useAuth();
+  const { signIn, signUp, user, userData, hasActiveSubscription } = useAuth();
 
   // Redirecionar se já estiver logado
   useEffect(() => {
     if (user) {
+      // Se tiver user mas não tiver userData, aguarda carregar (evita redirect errado)
+      if (userData === null) return;
+
       if (hasActiveSubscription()) {
         navigate("/dieta");
       } else {
         navigate("/assinatura");
       }
     }
-  }, [user, navigate, hasActiveSubscription]);
+  }, [user, userData, navigate, hasActiveSubscription]);
 
   const getErrorMessage = (errorCode: string): string => {
     const errorMessages: Record<string, string> = {
