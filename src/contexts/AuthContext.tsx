@@ -6,7 +6,7 @@ import {
     createUserWithEmailAndPassword,
     signOut as firebaseSignOut
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
 export interface Subscription {
@@ -56,80 +56,85 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [userData, setUserData] = useState<UserData | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchUserData = async (uid: string) => {
-        try {
-            const userDoc = await getDoc(doc(db, "users", uid));
-            if (userDoc.exists()) {
-                const data = userDoc.data();
-
-                // Helper segura para datas
-                const parseDate = (dateVal: any) => {
-                    if (!dateVal) return new Date();
-                    // Se for Timestamp do Firestore
-                    if (dateVal.toDate && typeof dateVal.toDate === 'function') {
-                        return dateVal.toDate();
-                    }
-                    // Se for string ou number
-                    return new Date(dateVal);
-                };
-
-                const subscription = data.subscription ? {
-                    ...data.subscription,
-                    startDate: parseDate(data.subscription.startDate),
-                    endDate: parseDate(data.subscription.endDate),
-                } : undefined;
-
-                const diet = data.diet ? {
-                    ...data.diet,
-                    generatedAt: parseDate(data.diet.generatedAt),
-                } : undefined;
-
-                setUserData({
-                    email: data.email,
-                    name: data.name,
-                    createdAt: parseDate(data.createdAt),
-                    subscription,
-                    diet,
-                });
-            } else {
-                // Se o usuário existe no Auth mas não no Firestore (ex: erro na criação)
-                // Definimos um userData básico para não travar a aplicação
-                setUserData({
-                    email: auth.currentUser?.email || "",
-                    name: auth.currentUser?.displayName || "",
-                    createdAt: new Date(),
-                });
+    // Efeito para monitorar autenticação
+    useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            setUser(user);
+            if (!user) {
+                setUserData(null);
+                setLoading(false);
             }
-        } catch (error) {
-            console.error("Erro ao buscar dados do usuário:", error);
-            // Em caso de erro, também liberamos para não travar no loading infinito
-            setUserData({
-                email: auth.currentUser?.email || "",
-                name: auth.currentUser?.displayName || "",
-                createdAt: new Date(),
+        });
+        return () => unsubscribeAuth();
+    }, []);
+
+    // Efeito para monitorar dados do usuário em tempo real
+    useEffect(() => {
+        let unsubscribeSnapshot: () => void;
+
+        if (user) {
+            const userRef = doc(db, "users", user.uid);
+
+            unsubscribeSnapshot = onSnapshot(userRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+
+                    // Helper segura para datas
+                    const parseDate = (dateVal: any) => {
+                        if (!dateVal) return new Date();
+                        if (dateVal.toDate && typeof dateVal.toDate === 'function') {
+                            return dateVal.toDate();
+                        }
+                        return new Date(dateVal);
+                    };
+
+                    const subscription = data.subscription ? {
+                        ...data.subscription,
+                        startDate: parseDate(data.subscription.startDate),
+                        endDate: parseDate(data.subscription.endDate),
+                    } : undefined;
+
+                    const diet = data.diet ? {
+                        ...data.diet,
+                        generatedAt: parseDate(data.diet.generatedAt),
+                    } : undefined;
+
+                    setUserData({
+                        email: data.email,
+                        name: data.name,
+                        createdAt: parseDate(data.createdAt),
+                        subscription,
+                        diet,
+                    });
+                } else {
+                    // Fallback para usuário sem doc
+                    setUserData({
+                        email: user.email || "",
+                        name: user.displayName || "",
+                        createdAt: new Date(),
+                    });
+                }
+                setLoading(false);
+            }, (error) => {
+                console.error("Erro no realtime listener:", error);
+                setLoading(false);
             });
         }
+
+        return () => {
+            if (unsubscribeSnapshot) unsubscribeSnapshot();
+        };
+    }, [user]);
+
+    // Manter fetchUserData apenas como compatibilidade ou refresh manual se necessário
+    const fetchUserData = async (uid: string) => {
+        // Agora o estado é gerenciado pelo snapshot, essa função pode ser no-op ou log
+        console.log("fetchUserData chamado (deprecated em favor do realtime)");
     };
 
     const refreshUserData = async () => {
-        if (user) {
-            await fetchUserData(user.uid);
-        }
+        // No-op, pois o snapshot já atualiza sozinho
     };
-
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            setUser(user);
-            if (user) {
-                await fetchUserData(user.uid);
-            } else {
-                setUserData(null);
-            }
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, []);
 
     const signIn = async (email: string, password: string) => {
         await signInWithEmailAndPassword(auth, email, password);
