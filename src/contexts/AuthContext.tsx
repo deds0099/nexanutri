@@ -21,6 +21,11 @@ export interface MealItem {
     time: string;
     items: string[];
     calories: number;
+    macros?: {
+        protein: number;
+        carbs: number;
+        fats: number;
+    };
 }
 
 export interface DietPlan {
@@ -28,6 +33,15 @@ export interface DietPlan {
     objective: string;
     meals: MealItem[];
     generatedAt: Date;
+    // New fields
+    tbm?: number;
+    tdee?: number;
+    macros?: {
+        protein: { g: number; pct: number };
+        carbs: { g: number; pct: number };
+        fats: { g: number; pct: number };
+    };
+    warnings?: string[];
 }
 
 interface UserData {

@@ -213,6 +213,34 @@ const MinhaDieta = () => {
                   </div>
                 </div>
 
+                {diet?.macros && (
+                  <div className="grid grid-cols-3 gap-4 mb-8">
+                    <div className="bg-blue-500/10 p-4 rounded-xl text-center border border-blue-500/20">
+                      <p className="text-2xl font-bold text-blue-600">{diet.macros.protein.g}g</p>
+                      <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Proteínas ({diet.macros.protein.pct}%)</p>
+                    </div>
+                    <div className="bg-green-500/10 p-4 rounded-xl text-center border border-green-500/20">
+                      <p className="text-2xl font-bold text-green-600">{diet.macros.carbs.g}g</p>
+                      <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Carboidratos ({diet.macros.carbs.pct}%)</p>
+                    </div>
+                    <div className="bg-orange-500/10 p-4 rounded-xl text-center border border-orange-500/20">
+                      <p className="text-2xl font-bold text-orange-600">{diet.macros.fats.g}g</p>
+                      <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">Gorduras ({diet.macros.fats.pct}%)</p>
+                    </div>
+                  </div>
+                )}
+
+                {diet?.warnings && diet.warnings.length > 0 && (
+                  <div className="mb-8 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+                    <h4 className="font-bold text-yellow-600 mb-2 flex items-center gap-2">⚠️ Atenção</h4>
+                    <ul className="list-disc list-inside text-sm text-yellow-700">
+                      {diet.warnings.map((w: string, i: number) => (
+                        <li key={i}>{w}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="space-y-6">
                   {!hasDiet ? (
                     <div className="text-center py-10">
@@ -346,7 +374,7 @@ const MinhaDieta = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </div >
   );
 };
 

@@ -11,6 +11,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+import { calculateDiet, DietInput } from "@/utils/dietCalculator";
+
+const atividades = [
+  { id: "sedentario", label: "Sedentário", desc: "Pouco ou nenhum exercício" },
+  { id: "leve", label: "Levemente ativo", desc: "Exercício leve 1-3 dias/semana" },
+  { id: "moderado", label: "Moderadamente ativo", desc: "Exercício moderado 3-5 dias/semana" },
+  { id: "intenso", label: "Muito ativo", desc: "Exercício pesado 6-7 dias/semana" },
+];
+
 const objetivos = [
   { id: "emagrecer", label: "Emagrecer", emoji: "🔥" },
   { id: "manter", label: "Manter peso", emoji: "⚖️" },
@@ -40,73 +49,28 @@ const Dieta = () => {
     peso: "",
     altura: "",
     sexo: "",
+    atividade: "",
     objetivo: "",
     restricao: "",
+    refeicoes: "",
   });
 
   const generateDiet = () => {
-    const peso = parseFloat(formData.peso);
-    const altura = parseFloat(formData.altura);
-    const idade = parseInt(formData.idade);
+    const input: DietInput = {
+      sexo: formData.sexo as "masculino" | "feminino",
+      idade: parseInt(formData.idade),
+      peso: parseFloat(formData.peso),
+      altura: parseFloat(formData.altura),
+      atividade: formData.atividade as "sedentario" | "leve" | "moderado" | "intenso",
+      objetivo: formData.objetivo as "emagrecer" | "manter" | "ganhar",
+      refeicoes: formData.refeicoes ? parseInt(formData.refeicoes) : undefined,
+      restricao: formData.restricao
+    };
 
-    // Cálculo TMB (Harris-Benedict Revisada)
-    let tmb = 0;
-    if (formData.sexo === "masculino") {
-      tmb = 88.36 + (13.4 * peso) + (4.8 * altura) - (5.7 * idade);
-    } else {
-      tmb = 447.6 + (9.2 * peso) + (3.1 * altura) - (4.3 * idade);
-    }
-
-    // Nível de atividade (Considerando levemente ativo como base 1.375)
-    const tdee = tmb * 1.375;
-
-    // Ajuste por objetivo
-    let targetCalories = tdee;
-    if (formData.objetivo === "emagrecer") targetCalories -= 500;
-    if (formData.objetivo === "ganhar") targetCalories += 500;
-
-    targetCalories = Math.round(targetCalories);
-
-    // Distribuição das refeições
-    // Café: 25%, Lanche1: 10%, Almoço: 35%, Lanche2: 10%, Jantar: 20%
-
-    const meals = [
-      {
-        name: "Café da Manhã",
-        time: "07:30",
-        calories: Math.round(targetCalories * 0.25),
-        items: [`2 ovos mexidos`, `1 fatia de pão integral`, `1 fruta média`, `Café ou chá sem açúcar`]
-      },
-      {
-        name: "Lanche da Manhã",
-        time: "10:30",
-        calories: Math.round(targetCalories * 0.10),
-        items: [`1 iogurte natural`, `15g de castanhas`]
-      },
-      {
-        name: "Almoço",
-        time: "13:00",
-        calories: Math.round(targetCalories * 0.35),
-        items: [`${Math.round(targetCalories * 0.05)}g de arroz integral`, `${Math.round(targetCalories * 0.04)}g de feijão`, `${Math.round(targetCalories * 0.08)}g de proteína (frango/peixe)`, `Salada à vontade`]
-      },
-      {
-        name: "Lanche da Tarde",
-        time: "16:00",
-        calories: Math.round(targetCalories * 0.10),
-        items: [`1 fruta`, `1 scoop de whey ou 2 ovos`]
-      },
-      {
-        name: "Jantar",
-        time: "19:30",
-        calories: Math.round(targetCalories * 0.20),
-        items: [`Legumes cozidos`, `${Math.round(targetCalories * 0.06)}g de proteína`, `Azeite de oliva`]
-      }
-    ];
+    const plan = calculateDiet(input);
 
     return {
-      calories: targetCalories,
-      objective: formData.objetivo,
-      meals,
+      ...plan,
       generatedAt: new Date()
     };
   };
@@ -120,11 +84,15 @@ const Dieta = () => {
       toast.error("Preencha peso e altura");
       return;
     }
-    if (step === 3 && !formData.objetivo) {
+    if (step === 3 && !formData.atividade) {
+      toast.error("Selecione o nível de atividade");
+      return;
+    }
+    if (step === 4 && !formData.objetivo) {
       toast.error("Selecione um objetivo");
       return;
     }
-    if (step < 4) {
+    if (step < 5) {
       setStep(step + 1);
     } else {
       if (!user) {
@@ -143,6 +111,7 @@ const Dieta = () => {
           altura: formData.altura,
           idade: formData.idade,
           sexo: formData.sexo,
+          atividade: formData.atividade,
           objetivo: formData.objetivo
         });
 
@@ -181,7 +150,7 @@ const Dieta = () => {
           <div className="text-center mb-8">
             <img src={logoNexa} alt="NexaNutri" className="w-16 h-16 mx-auto mb-4" />
             <div className="flex justify-center gap-2 mb-4">
-              {[1, 2, 3, 4].map((s) => (
+              {[1, 2, 3, 4, 5].map((s) => (
                 <div
                   key={s}
                   className={`w-3 h-3 rounded-full transition-colors ${s <= step ? "bg-primary" : "bg-border"
@@ -189,7 +158,7 @@ const Dieta = () => {
                 />
               ))}
             </div>
-            <p className="text-sm text-muted-foreground">Passo {step} de 4</p>
+            <p className="text-sm text-muted-foreground">Passo {step} de 5</p>
           </div>
 
           {step === 1 && (
@@ -226,8 +195,8 @@ const Dieta = () => {
                       key={g.id}
                       onClick={() => setFormData({ ...formData, sexo: g.id })}
                       className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition-all ${formData.sexo === g.id
-                          ? "border-primary bg-secondary"
-                          : "border-border hover:border-primary/50"
+                        ? "border-primary bg-secondary"
+                        : "border-border hover:border-primary/50"
                         }`}
                     >
                       <span className="text-xl">{g.emoji}</span>
@@ -272,6 +241,34 @@ const Dieta = () => {
           {step === 3 && (
             <div className="space-y-4">
               <h2 className="text-xl font-bold text-foreground text-center mb-6">
+                Nível de atividade física
+              </h2>
+              <div className="grid gap-3">
+                {atividades.map((atv) => (
+                  <button
+                    key={atv.id}
+                    onClick={() => setFormData({ ...formData, atividade: atv.id })}
+                    className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${formData.atividade === atv.id
+                      ? "border-primary bg-secondary"
+                      : "border-border hover:border-primary/50"
+                      }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="font-medium text-foreground">{atv.label}</span>
+                      {formData.atividade === atv.id && (
+                        <Check size={20} className="text-primary" />
+                      )}
+                    </div>
+                    <span className="text-sm text-muted-foreground">{atv.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-foreground text-center mb-6">
                 Qual seu objetivo?
               </h2>
               <div className="grid gap-3">
@@ -295,7 +292,7 @@ const Dieta = () => {
             </div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <div className="space-y-4">
               <h2 className="text-xl font-bold text-foreground text-center mb-6">
                 Alguma restrição alimentar?
@@ -324,7 +321,7 @@ const Dieta = () => {
             onClick={handleNext}
             className="w-full mt-8 bg-primary text-primary-foreground hover:bg-primary/90 py-6 rounded-xl font-semibold group"
           >
-            {step === 4 ? "Gerar minha dieta" : "Continuar"}
+            {step === 5 ? "Gerar minha dieta" : "Continuar"}
             <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
           </Button>
         </motion.div>
