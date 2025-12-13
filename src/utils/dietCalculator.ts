@@ -94,21 +94,39 @@ export function calculateDiet(input: DietInput): DietPlan {
     let targetCalories = tdee;
     const warnings: string[] = [];
 
+    // STRICT RULE: Calorie Limits for Emagrecimento
     if (input.objetivo === "emagrecer") {
-        // Déficit entre 15% e 25% (usando 20% como média segura)
+        // Minimum deficit 15%, Max deficit 25%.
+        // Safe starting point: 20% deficit
         targetCalories = tdee * 0.80;
 
-        // Limites de segurança
+        // REGRAS DE BLOQUEIO DE ERRO CALÓRICO
+        // 1. Never >= 90% TDEE
+        if (targetCalories >= tdee * 0.90) {
+            targetCalories = tdee * 0.85; // Reset to 15% deficit mandatory
+            warnings.push("Ajuste automático para garantir déficit calórico mínimo de 15%.");
+        }
+
+        // 2. Safety Floors
         const minCalories = input.sexo === "masculino" ? 1500 : 1200;
         if (targetCalories < minCalories) {
             targetCalories = minCalories;
-            warnings.push(`Ajustamos as calorias para o mínimo de segurança (${minCalories} kcal).`);
+
+            // Check if min calories violates the < 90% TDEE rule? 
+            // If TDEE is very low (e.g. small sedentary woman), min 1200 might be > 90% TDEE.
+            // In that extreme case, safety floor usually wins in medical contexts, 
+            // but the prompt implies strict strictness. 
+            // However, 1200 is widely regarded as absolute floor. We stick to floor but warn.
+
+            if (targetCalories >= tdee * 0.90) {
+                warnings.push(`Cuidado: Calorias (${Math.round(targetCalories)}) próximas ao seu gasto total devido ao limite mínimo de segurança.`);
+            } else {
+                warnings.push(`Ajustamos as calorias para o mínimo de segurança (${minCalories} kcal).`);
+            }
         }
     } else if (input.objetivo === "ganhar") {
-        // Superávit entre 10% e 20% (usando 15% como média)
         targetCalories = tdee * 1.15;
     } else {
-        // Manutenção
         targetCalories = tdee;
     }
 
@@ -125,14 +143,21 @@ export function calculateDiet(input: DietInput): DietPlan {
         proteinGrams = 2.2 * input.peso; // Faixa 1.8-2.4
     }
 
-    // Gorduras: 25% do total calórico (Faixa 20-30%)
+    // Priority Rule: Calories is MAX. Macros adjust.
+    // Ensure protein doesn't eat entire budget.
+    const maxProteinCalories = targetCalories * 0.40; // Cap protein at 40% to leave room for fats/carbs
+    if (proteinGrams * 4 > maxProteinCalories) {
+        proteinGrams = maxProteinCalories / 4;
+    }
+
+    // Gorduras: 25% do total calórico
     const fatCalories = targetCalories * 0.25;
     const fatGrams = fatCalories / 9;
 
     // Carboidratos: O que sobrar
     const proteinCalories = proteinGrams * 4;
     const remainingCalories = targetCalories - proteinCalories - fatCalories;
-    const carbGrams = remainingCalories / 4;
+    const carbGrams = Math.max(0, remainingCalories / 4);
 
     const macros = {
         protein: { g: Math.round(proteinGrams), pct: Math.round((proteinCalories / targetCalories) * 100) },
@@ -142,17 +167,14 @@ export function calculateDiet(input: DietInput): DietPlan {
 
     // ETAPA 5: Distribuição das Refeições
     const totalMeals = input.refeicoes || 5;
-    const meals: Meal[] = [];
 
-    // Definição aproximada de distribuição baseada no número de refeições
+    // Distribution percentages
     let distribution: Record<string, number> = {};
-
     if (totalMeals === 3) {
         distribution = { "Café da Manhã": 0.30, "Almoço": 0.40, "Jantar": 0.30 };
     } else if (totalMeals === 4) {
         distribution = { "Café da Manhã": 0.25, "Almoço": 0.35, "Lanche": 0.15, "Jantar": 0.25 };
     } else {
-        // 5 ou mais (padrão 5)
         distribution = {
             "Café da Manhã": 0.20,
             "Lanche da Manhã": 0.10,
@@ -162,48 +184,83 @@ export function calculateDiet(input: DietInput): DietPlan {
         };
     }
 
-    // ETAPA 6: Montagem do Cardápio (Algoritmo Simplificado)
-    let currentTime = 7.5; // 7:30
+    // ETAPA 6: Montagem do Cardápio (Com Regras de Porção)
+    const meals: Meal[] = [];
+    let currentTime = 7.5;
 
     for (const [mealName, pct] of Object.entries(distribution)) {
         const mealCalories = Math.round(targetCalories * pct);
         const mealItems: string[] = [];
 
-        // Seleção simples baseada no tipo de refeição
+        // Porção caps (apenas para emagrecimento)
+        const isCutting = input.objetivo === "emagrecer";
+
+        // Limits
+        const MAX_RICE = 120; // g
+        const MAX_BREAD = 2; // fatias
+        const MAX_OIL = 1; // colher de chá (approx 5g fat?) No, 1 tsp oil is ~5g fat. User said "1 colher de chá".
+
         if (mealName.includes("Café")) {
-            const carbs = Math.round((mealCalories * 0.4) / 60); // Pão (aprox. 60kcal/fatia)
-            const protein = Math.round((mealCalories * 0.3) / 70); // Ovos (aprox. 70kcal/unid)
-            const fruit = 1;
+            // Logic for breakfast
+            let carbsPortion = Math.round((mealCalories * 0.45) / 60); // Break in slices (60kcal/slice)
 
-            if (carbs > 0) mealItems.push(`${carbs} fatias de pão integral`);
-            if (protein > 0) mealItems.push(`${protein} ovos mexidos`);
-            mealItems.push(`${fruit} fatia de mamão ou fruta média`);
-            mealItems.push("Café sem açúcar");
-        }
-        else if (mealName.includes("Almoço") || mealName.includes("Jantar")) {
-            // Regra de 3 para calcular gramas aproximados
-            // Arroz (1.1 kcal/g), Feijão (caldo + grão ~ 0.7 kcal/g - simplificado na db n tem, mas vamos usar arroz como base carbo)
-            // Proteína (1.65 kcal/g frango)
+            if (isCutting && carbsPortion > MAX_BREAD) carbsPortion = MAX_BREAD;
 
-            const carbCals = mealCalories * 0.4;
-            const protCals = mealCalories * 0.3;
-            const fatCals = mealCalories * 0.1; // Resto vem dos alimentos
+            const proteinUnits = Math.round((mealCalories * 0.3) / 70); // Eggs
 
-            const riceGrams = Math.round(carbCals / 1.1);
-            const proteinGramsFood = Math.round(protCals / 1.65); // Frango base
-            const beansGrams = Math.round(riceGrams / 2); // Metade do arroz em feijão
+            if (carbsPortion > 0) mealItems.push(`${carbsPortion} fatias de pão integral`);
+
+            // If we capped bread, maybe add fruit?
+            mealItems.push(`1 fruta média ou fatia de mamão`);
+
+            if (proteinUnits > 0) mealItems.push(`${Math.max(1, proteinUnits)} ovos mexidos`);
+            else mealItems.push(`1 ovo mexido`); // Min 1
+
+            mealItems.push("Café ou chá sem açúcar");
+
+        } else if (mealName.includes("Almoço") || mealName.includes("Jantar")) {
+            // Lunch/Dinner logic
+            const carbCals = mealCalories * 0.35; // Slightly lower carb for meals
+            // Rice: 1.1 kcal/g approximately (cooked)
+            let riceGrams = Math.round(carbCals / 1.1);
+
+            // Apply Cap
+            if (isCutting && riceGrams > MAX_RICE) {
+                riceGrams = MAX_RICE;
+                // Calories lost from carb cap are simply "saved" (deficit) or shifted to veg volume effectively
+            }
+            if (riceGrams < 50) riceGrams = 80; // Minimum sensible portion
+
+            // Protein: 1.65 kcal/g (chicken breast)
+            const proteinGramsFood = Math.round((mealCalories * 0.35) / 1.65);
+
+            // Beans: half of rice usually
+            const beansGrams = Math.round(riceGrams / 2);
 
             mealItems.push(`${riceGrams}g de arroz integral (ou batata/macarrão)`);
             mealItems.push(`${beansGrams}g de feijão`);
-            mealItems.push(`${proteinGramsFood}g de frango grelhado ou peixe`);
+            mealItems.push(`${proteinGramsFood}g de frango grelhado/peixe ou carne magra`);
+
+            // Oil Cap
+            if (isCutting) {
+                mealItems.push("1 colher de chá de azeite de oliva (max)");
+            } else {
+                mealItems.push("1 col. sopa de azeite de oliva");
+            }
+
             mealItems.push("Salada de folhas verdes à vontade");
-            mealItems.push("1 col. sopa de azeite de oliva");
-        }
-        else {
-            // Lanches
-            mealItems.push("1 iogurte natural ou fruta");
-            mealItems.push("15g de oleaginosas (castanhas)");
-            if (mealCalories > 200) mealItems.push("1 scoop de Whey Protein");
+            mealItems.push("Legumes cozidos (brócolis/cenoura) à vontade");
+
+        } else {
+            // Snacks
+            if (mealCalories < 150) {
+                mealItems.push("1 fruta média");
+                mealItems.push("1 iogurte natural");
+            } else {
+                mealItems.push("1 iogurte natural com 15g de aveia");
+                mealItems.push("1 fruta média");
+                if (mealCalories > 300) mealItems.push("1 scoop de Whey Protein");
+            }
         }
 
         const timeString = `${Math.floor(currentTime).toString().padStart(2, '0')}:${(currentTime % 1 * 60).toString().padStart(2, '0')}`;
@@ -213,17 +270,26 @@ export function calculateDiet(input: DietInput): DietPlan {
             time: timeString,
             calories: mealCalories,
             macros: {
-                protein: Math.round(mealCalories * (macros.protein.pct / 100) / 4),
-                carbs: Math.round(mealCalories * (macros.carbs.pct / 100) / 4),
-                fats: Math.round(mealCalories * (macros.fats.pct / 100) / 9)
+                // Estimation for UI
+                protein: Math.round(mealCalories * macros.protein.pct / 100 / 4),
+                carbs: Math.round(mealCalories * macros.carbs.pct / 100 / 4),
+                fats: Math.round(mealCalories * macros.fats.pct / 100 / 9)
             },
             items: mealItems
         });
 
-        currentTime += 3; // +3 horas aprox
+        currentTime += 3;
     }
 
-    // ETAPA 7: Validação Final (Ajuste fino visual na UI)
+    // ETAPA 7: Validação Final
+    const totalMealCalories = meals.reduce((acc, m) => acc + m.calories, 0);
+
+    // Sanity check for sum (allow small rounding diff)
+    // In our logic mealCalories is derived from targetCalories * pct, so sum should match targetCalories exactly or off by 1-2.
+
+    if (Math.abs(totalMealCalories - targetCalories) > 50) {
+        warnings.push("Nota: Pequeno ajuste no total calórico devido ao arredondamento das refeições.");
+    }
 
     return {
         tbm: Math.round(tmb),

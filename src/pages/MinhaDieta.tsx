@@ -207,9 +207,15 @@ const MinhaDieta = () => {
                       <p className="text-muted-foreground">Meta: <span className="capitalize">{diet?.objective || "Personalizado"}</span></p>
                     </div>
                   </div>
-                  <div className="text-center md:text-right bg-secondary/50 p-4 rounded-xl">
-                    <p className="text-3xl font-bold text-primary">{totalCalorias}</p>
-                    <p className="text-sm text-muted-foreground font-medium">kcal diárias</p>
+                  <div className="flex gap-4">
+                    <div className="text-center md:text-right bg-secondary/50 p-4 rounded-xl">
+                      <p className="text-lg font-bold text-muted-foreground">{diet?.tdee || "--"}</p>
+                      <p className="text-xs text-muted-foreground">TDEE</p>
+                    </div>
+                    <div className="text-center md:text-right bg-secondary/50 p-4 rounded-xl border border-primary/20">
+                      <p className="text-3xl font-bold text-primary">{totalCalorias}</p>
+                      <p className="text-sm text-foreground font-medium">Meta Diária</p>
+                    </div>
                   </div>
                 </div>
 
