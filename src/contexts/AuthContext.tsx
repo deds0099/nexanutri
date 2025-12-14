@@ -16,10 +16,16 @@ export interface Subscription {
     endDate: Date;
 }
 
+export interface MealOption {
+    name: string;
+    items: string[];
+}
+
 export interface MealItem {
     name: string;
     time: string;
     items: string[];
+    options?: MealOption[];
     calories: number;
     macros?: {
         protein: number;

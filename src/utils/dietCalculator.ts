@@ -14,6 +14,11 @@ export interface MealItem {
     portion: string;
 }
 
+export interface MealOption {
+    name: string;
+    items: string[];
+}
+
 export interface Meal {
     name: string;
     time: string;
@@ -23,7 +28,8 @@ export interface Meal {
         carbs: number;
         fats: number;
     };
-    items: string[];
+    items: string[]; // Mantido para compatibilidade (é a Opção 1)
+    options?: MealOption[]; // Nova estrutura
 }
 
 export interface DietPlan {
@@ -247,84 +253,130 @@ export function calculateDiet(input: DietInput): DietPlan {
 
     for (const [mealName, pct] of Object.entries(distribution)) {
         const mealCalories = Math.round(targetCalories * pct);
-        const mealItems: string[] = [];
+
+        // Estrutura para manter as 3 opções
+        const options: { name: string, items: string[] }[] = [];
 
         if (mealName.includes("Café")) {
-            // ☕ CAFÉ DA MANHÃ
+            // ☕ CAFÉ DA MANHÃ - 3 OPÇÕES
+
+            // OPÇÃO 1: Clássico (Pão + Ovo)
+            const opt1: string[] = [];
             let breadSlices = Math.round((mealCalories * 0.45) / 60);
-
-            if (isCutting && breadSlices > MAX_BREAD) {
-                breadSlices = MAX_BREAD;
-            }
-
+            if (isCutting && breadSlices > MAX_BREAD) breadSlices = MAX_BREAD;
             const eggs = Math.max(1, Math.round((mealCalories * 0.3) / 70));
 
-            if (breadSlices > 0) mealItems.push(`${breadSlices} ${breadSlices === 1 ? 'fatia' : 'fatias'} de pão integral`);
-            mealItems.push(`${eggs} ${eggs === 1 ? 'ovo' : 'ovos'} mexidos ou cozidos`);
-            mealItems.push("1 fruta média (banana, maçã ou mamão)");
+            if (breadSlices > 0) opt1.push(`${breadSlices} ${breadSlices === 1 ? 'fatia' : 'fatias'} de pão integral`);
+            opt1.push(`${eggs} ${eggs === 1 ? 'ovo' : 'ovos'} mexidos ou cozidos`);
+            opt1.push("1 fruta média (banana, maçã ou mamão)");
+            opt1.push(isCutting ? "1 colher de chá de azeite/manteiga (max 5g)" : "1 colher de sopa de azeite/manteiga");
+            opt1.push("Café ou chá sem açúcar à vontade");
+            options.push({ name: "Opção 1: Clássico", items: opt1 });
 
-            if (isCutting) {
-                mealItems.push("1 colher de chá de azeite ou pasta de amendoim (max 15g)");
-            } else {
-                mealItems.push("1 colher de sopa de azeite ou pasta de amendoim");
-            }
+            // OPÇÃO 2: Raízes/Regional (Tapioca/Cuscuz/Batata)
+            const opt2: string[] = [];
+            const carbSourceGrams = Math.round((mealCalories * 0.45) / 2.5); // Aproximação calórica para tapioca/cuscuz
+            const cheeseSlices = Math.max(1, Math.round((mealCalories * 0.15) / 60)); // Queijo branco
 
-            mealItems.push("Café ou chá sem açúcar à vontade");
+            opt2.push(`${carbSourceGrams}g de tapioca, cuscuz ou batata doce`);
+            opt2.push(`${eggs} ${eggs === 1 ? 'ovo' : 'ovos'} ou ${cheeseSlices * 30}g de queijo branco/cotagge`);
+            opt2.push("1 fatia de melão ou melancia");
+            opt2.push("Café com leite desnatado (adoçante opcional)");
+            options.push({ name: "Opção 2: Regional", items: opt2 });
+
+            // OPÇÃO 3: Prático (Iogurte/Aveia)
+            const opt3: string[] = [];
+            const oatGrams = Math.round((mealCalories * 0.35) / 3.8);
+
+            opt3.push("1 pote de iogurte natural desnatado/proteico");
+            opt3.push(`${oatGrams}g de aveia em flocos ou granola sem açúcar`);
+            opt3.push("1 fruta picada (morango, kiwi ou banana)");
+            if (!isCutting) opt3.push("1 colher de mel ou pasta de amendoim");
+            options.push({ name: "Opção 3: Prático", items: opt3 });
 
         } else if (mealName.includes("Almoço") || mealName.includes("Jantar")) {
-            // 🍽️ ALMOÇO / JANTAR
+            // 🍽️ ALMOÇO / JANTAR - 3 OPÇÕES
             const carbCals = mealCalories * 0.35;
-            let riceGrams = Math.round(carbCals / 1.1);
+            let standardCarbGrams = Math.round(carbCals / 1.1); // Base arroz
+            if (isCutting && standardCarbGrams > MAX_RICE) standardCarbGrams = MAX_RICE;
+            if (standardCarbGrams < 60) standardCarbGrams = 80;
 
-            // Aplicar limite de porção
-            if (isCutting && riceGrams > MAX_RICE) {
-                riceGrams = MAX_RICE;
-            }
-            if (riceGrams < 60) riceGrams = 80; // Mínimo razoável
+            const proteinGramsFood = Math.round((mealCalories * 0.35) / 1.65); // Base frango
 
-            let beansGrams = Math.round(riceGrams * 0.6);
-            if (isCutting && beansGrams > MAX_BEANS) {
-                beansGrams = MAX_BEANS;
-            }
+            // OPÇÃO 1: Brasileiro (Arroz + Feijão)
+            const opt1: string[] = [];
+            let beansGrams = Math.round(standardCarbGrams * 0.6);
+            if (isCutting && beansGrams > MAX_BEANS) beansGrams = MAX_BEANS;
 
-            const proteinGramsFood = Math.round((mealCalories * 0.35) / 1.65);
+            opt1.push(`${standardCarbGrams}g de arroz integral ou branco`);
+            opt1.push(`${beansGrams}g de feijão (qualquer tipo) ou lentilha`);
+            opt1.push(`${proteinGramsFood}g de frango grelhado ou carne moída magra`);
+            opt1.push("Salada crua variada (metade do prato)");
+            opt1.push(isCutting ? "1 fio de azeite para temperar" : "1 colher de sopa de azeite");
+            options.push({ name: "Opção 1: Dia a Dia", items: opt1 });
 
-            mealItems.push(`${riceGrams}g de arroz integral, batata doce ou macarrão integral`);
-            mealItems.push(`${beansGrams}g de feijão ou lentilha`);
-            mealItems.push(`${proteinGramsFood}g de frango grelhado, peixe ou carne magra`);
+            // OPÇÃO 2: Tubérculos/Massas
+            const opt2: string[] = [];
+            const potatoGrams = Math.round(standardCarbGrams * 1.5); // Batata tem menos caloria que arroz, pode mais
 
-            // Limite de azeite
+            opt2.push(`${potatoGrams}g de batata (inglesa/doce/baroa) assada ou purê OU macarrão integral`);
+            opt2.push(`${Math.round(proteinGramsFood * 1.1)}g de peixe (tilápia/pescada) ou frango desfiado`);
+            opt2.push("Legumes cozidos/vapor (brócolis, cenoura, vagem)");
+            options.push({ name: "Opção 2: Alternativa", items: opt2 });
+
+            // OPÇÃO 3: Low Carb / Leve (Mais proteína/gordura, menos carbo direto - ajustado para bater caloria)
+            // Se for emagrecer, foca em volume. Se for ganho, foca em densidade.
+            const opt3: string[] = [];
+            const lowCarbVeggies = "Abobrinha, berinjela e couve-flor refogadas";
+
             if (isCutting) {
-                mealItems.push("1 colher de chá de azeite de oliva (max)");
+                opt3.push(`${Math.round(proteinGramsFood * 1.2)}g de proteína magra (frango/peixe/carne)`);
+                opt3.push("Mix de legumes assados à vontade (substituindo o arroz)");
+                opt3.push("1 fruta cítrica de sobremesa (laranja/abacaxi)");
             } else {
-                mealItems.push("1 colher de sopa de azeite de oliva");
+                opt3.push(`${standardCarbGrams}g de arroz ou purê de mandioquinha`);
+                opt3.push(`${proteinGramsFood}g de carne de panela (patinho/músculo) com legumes`);
+                opt3.push("Salada verde escura");
             }
+            options.push({ name: "Opção 3: Variada", items: opt3 });
 
-            mealItems.push("Salada de folhas verdes à vontade");
-            mealItems.push("Legumes cozidos (brócolis, cenoura, abobrinha) à vontade");
 
         } else {
-            // 🥤 LANCHES
+            // 🥤 LANCHES - 3 OPÇÕES
+
+            // OPÇÃO 1: Fruta + Lácteo
+            const opt1: string[] = [];
+            let fruitCals = mealCalories * 0.6;
             if (mealCalories < 150) {
-                mealItems.push("1 fruta média");
-                mealItems.push("1 iogurte natural desnatado");
-            } else if (mealCalories < 250) {
-                mealItems.push("1 iogurte natural com 20g de aveia");
-                mealItems.push("1 fruta média");
-
-                if (isCutting) {
-                    mealItems.push(`${MAX_NUTS}g de castanhas ou amêndoas (max)`);
-                } else {
-                    mealItems.push("20-30g de castanhas ou amêndoas");
-                }
+                opt1.push("1 fruta média (maçã/pera)");
+                opt1.push("1 iogurte natural ou 1 fatia de queijo");
             } else {
-                mealItems.push("1 scoop de Whey Protein com água");
-                mealItems.push("1 banana com 15g de aveia");
-
-                if (!isCutting) {
-                    mealItems.push("1 colher de sopa de pasta de amendoim");
-                }
+                opt1.push("Salada de frutas (1 xícara)");
+                opt1.push("1 iogurte com 1 colher de aveia/chia");
             }
+            options.push({ name: "Opção 1: Refrescante", items: opt1 });
+
+            // OPÇÃO 2: Prático/Seco
+            const opt2: string[] = [];
+            if (mealCalories < 200) {
+                opt2.push(isCutting ? `${MAX_NUTS}g de mix de castanhas` : "30g de mix de castanhas");
+                opt2.push("1 fruta seca ou fresca fácil (banana)");
+            } else {
+                opt2.push("Sanduíche natural: 2 fatias pão integral + atum/frango + salada");
+            }
+            options.push({ name: "Opção 2: Prático", items: opt2 });
+
+            // OPÇÃO 3: Líquido/Proteico
+            const opt3: string[] = [];
+            if (mealCalories > 200 || input.objetivo === "ganhar") {
+                opt3.push("Shake: 1 scoop Whey Protein + Água/Leite desnatado");
+                opt3.push("1 banana ou 30g de aveia batida junto");
+                if (!isCutting) opt3.push("1 colher de pasta de amendoim");
+            } else {
+                opt3.push("1 barra de proteína (verificar tabela nutricional)");
+                opt3.push("Água de coco ou chá gelado");
+            }
+            options.push({ name: "Opção 3: Rápido", items: opt3 });
         }
 
         const hours = Math.floor(currentTime);
@@ -340,7 +392,8 @@ export function calculateDiet(input: DietInput): DietPlan {
                 carbs: Math.round(mealCalories * macros.carbs.pct / 100 / 4),
                 fats: Math.round(mealCalories * macros.fats.pct / 100 / 9)
             },
-            items: mealItems
+            options: options, // Usando a nova estrutura de opções
+            items: options[0].items // Mantendo items como fallback (Opção 1)
         });
 
         currentTime += 3;

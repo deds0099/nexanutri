@@ -343,21 +343,53 @@ const MinhaDieta = () => {
                           <span className="text-sm font-bold text-muted-foreground">{refeicao.time}</span>
                         </div>
 
-                        <div className="flex-grow">
-                          <div className="flex justify-between items-start mb-2">
+                        <div className="flex-grow w-full">
+                          <div className="flex justify-between items-start mb-4">
                             <h3 className="font-bold text-lg text-foreground">{refeicao.name}</h3>
                             <span className="text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-full">
                               {refeicao.calories} kcal
                             </span>
                           </div>
-                          <ul className="grid md:grid-cols-2 gap-2">
-                            {refeicao.items.map((item, i) => (
-                              <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
-                                {item}
-                              </li>
-                            ))}
-                          </ul>
+
+                          {/* Verifica se tem opções múltiplas (novo formato) ou simples (antigo) */}
+                          {refeicao.options && refeicao.options.length > 0 ? (
+                            <Tabs defaultValue="opt-0" className="w-full">
+                              <TabsList className="flex flex-wrap w-full h-auto p-1 bg-secondary/30 rounded-lg mb-3">
+                                {refeicao.options.map((opt: any, optIdx: number) => (
+                                  <TabsTrigger
+                                    key={optIdx}
+                                    value={`opt-${optIdx}`}
+                                    className="flex-1 py-1.5 text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md transition-all"
+                                  >
+                                    {opt.name}
+                                  </TabsTrigger>
+                                ))}
+                              </TabsList>
+
+                              {refeicao.options.map((opt: any, optIdx: number) => (
+                                <TabsContent key={optIdx} value={`opt-${optIdx}`} className="mt-0 space-y-2">
+                                  <ul className="grid md:grid-cols-2 gap-2">
+                                    {opt.items.map((item: string, i: number) => (
+                                      <li key={i} className="flex items-center gap-2 text-sm text-foreground/80">
+                                        <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
+                                        {item}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </TabsContent>
+                              ))}
+                            </Tabs>
+                          ) : (
+                            /* Fallback para dietas antigas */
+                            <ul className="grid md:grid-cols-2 gap-2">
+                              {refeicao.items.map((item, i) => (
+                                <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
                       </div>
                     ))
