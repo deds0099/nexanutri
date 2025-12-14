@@ -85,6 +85,8 @@ const MinhaDieta = () => {
       const canvas = await html2canvas(dietRef.current, {
         scale: 2,
         backgroundColor: "#ffffff",
+        windowWidth: 1440, // Força layout desktop para evitar cortes no mobile
+        useCORS: true, // Garante carregamento de imagens externas
       });
 
       const imgData = canvas.toDataURL("image/png");
