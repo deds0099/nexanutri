@@ -264,10 +264,22 @@ const MinhaDieta = () => {
 
                 <div className="space-y-6">
                   {!hasDiet ? (
-                    <div className="text-center py-10">
-                      <p className="text-muted-foreground mb-4">Você ainda não gerou seu plano alimentar.</p>
-                      <Button onClick={() => navigate("/dieta")} className="bg-primary text-white">
-                        Gerar Minha Dieta Agora
+                    <div className="flex flex-col items-center justify-center py-16 px-4 bg-secondary/20 rounded-3xl border-2 border-dashed border-primary/20">
+                      <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                        <Utensils className="text-primary w-10 h-10" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-foreground mb-2 text-center">
+                        Você ainda não tem um plano alimentar
+                      </h3>
+                      <p className="text-muted-foreground text-center max-w-md mb-8">
+                        Nossa IA pode criar um plano totalmente personalizado para seus objetivos e preferências em segundos.
+                      </p>
+                      <Button
+                        onClick={() => navigate("/dieta")}
+                        size="lg"
+                        className="bg-primary text-white hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all font-semibold px-8 py-6 h-auto text-lg rounded-xl"
+                      >
+                        Criar Minha Dieta Agora
                       </Button>
                     </div>
                   ) : (

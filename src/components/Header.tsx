@@ -18,7 +18,7 @@ const Header = () => {
 
   const handleDashboard = () => {
     if (hasActiveSubscription()) {
-      navigate("/dieta");
+      navigate("/minha-dieta");
     } else {
       navigate("/assinatura");
     }
@@ -73,7 +73,7 @@ const Header = () => {
                 size="sm"
                 onClick={handleDashboard}
               >
-                {hasActiveSubscription() ? "Minha Dieta" : "Assinar"}
+                {hasActiveSubscription() ? "Dashboard" : "Assinar"}
               </Button>
               <Button
                 variant="ghost"
@@ -150,7 +150,7 @@ const Header = () => {
                     className="w-full"
                     onClick={handleDashboard}
                   >
-                    {hasActiveSubscription() ? "Minha Dieta" : "Assinar Plano"}
+                    {hasActiveSubscription() ? "Dashboard" : "Assinar Plano"}
                   </Button>
                   <Button
                     variant="outline"
