@@ -103,6 +103,19 @@ const MinhaDieta = () => {
           backgroundColor: "#ffffff",
           windowWidth: 1440, // Importante para layout responsivo
           useCORS: true,
+          onclone: (clonedDoc) => {
+            // Força largura desktop no clone para evitar layout mobile esticado
+            const body = clonedDoc.body;
+            body.style.width = '1440px';
+            body.style.minWidth = '1440px';
+
+            // Garante que o container principal também tenha espaço
+            const container = clonedDoc.getElementById('root');
+            if (container) {
+              container.style.width = '1440px';
+              container.style.minWidth = '1440px';
+            }
+          }
         });
 
         const imgData = canvas.toDataURL("image/png");
