@@ -359,7 +359,7 @@ const MinhaDieta = () => {
                                   <p className="text-sm font-semibold text-primary mb-2 border-b border-primary/20 pb-1">
                                     {opt.name}
                                   </p>
-                                  <ul className="grid md:grid-cols-2 gap-2">
+                                  <ul className="flex flex-col gap-1">
                                     {opt.items.map((item: string, i: number) => (
                                       <li key={i} className="flex items-center gap-2 text-sm text-foreground/80">
                                         <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
@@ -372,7 +372,7 @@ const MinhaDieta = () => {
                             </div>
                           ) : (
                             /* Fallback para dietas antigas */
-                            <ul className="grid md:grid-cols-2 gap-2">
+                            <ul className="flex flex-col gap-1">
                               {refeicao.items.map((item, i) => (
                                 <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />
