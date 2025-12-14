@@ -7,9 +7,14 @@ import { db } from '@/lib/firebase';
 export const analyzeMealPhoto = async (
     payload: WebhookPayload
 ): Promise<MealAnalysis | null> => {
+    // Log para debug
+    console.log('🔍 [WEBHOOK] Iniciando análise de refeição...');
+    console.log('🔍 [WEBHOOK] URL configurada:', WEBHOOK_CONFIG.url);
+    console.log('🔍 [WEBHOOK] Payload:', JSON.stringify(payload, null, 2));
+
     // Se o webhook não estiver configurado, retorna análise mock para desenvolvimento
     if (!WEBHOOK_CONFIG.url) {
-        console.warn('Webhook URL not configured. Using mock analysis.');
+        console.warn('⚠️ [WEBHOOK] URL not configured. Using mock analysis.');
         return getMockAnalysis();
     }
 
@@ -18,8 +23,13 @@ export const analyzeMealPhoto = async (
     // Retry logic
     for (let attempt = 1; attempt <= WEBHOOK_CONFIG.maxRetries; attempt++) {
         try {
+            console.log(`🚀 [WEBHOOK] Tentativa ${attempt}/${WEBHOOK_CONFIG.maxRetries}...`);
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), WEBHOOK_CONFIG.timeout);
+
+            console.log('📤 [WEBHOOK] Enviando requisição para:', WEBHOOK_CONFIG.url);
+            console.log('📤 [WEBHOOK] Headers:', JSON.stringify(WEBHOOK_CONFIG.headers, null, 2));
 
             const response = await fetch(WEBHOOK_CONFIG.url, {
                 method: 'POST',
@@ -30,34 +40,57 @@ export const analyzeMealPhoto = async (
 
             clearTimeout(timeoutId);
 
+            console.log('📥 [WEBHOOK] Resposta recebida. Status:', response.status);
+            console.log('📥 [WEBHOOK] Headers da resposta:', JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
+
             if (!response.ok) {
-                throw new Error(`Webhook returned status ${response.status}`);
+                const errorText = await response.text();
+                console.error('❌ [WEBHOOK] Erro na resposta:', errorText);
+                throw new Error(`Webhook returned status ${response.status}: ${errorText}`);
             }
 
-            const data: WebhookResponse = await response.json();
+            const responseText = await response.text();
+            console.log('📄 [WEBHOOK] Corpo da resposta:', responseText);
+
+            let data: WebhookResponse;
+            try {
+                data = JSON.parse(responseText);
+                console.log('✅ [WEBHOOK] JSON parseado com sucesso:', JSON.stringify(data, null, 2));
+            } catch (parseError) {
+                console.error('❌ [WEBHOOK] Erro ao parsear JSON:', parseError);
+                throw new Error(`Failed to parse webhook response: ${responseText}`);
+            }
 
             // O webhook retorna diretamente a estrutura de análise
             if (data && data.calorias_totais_kcal !== undefined) {
+                console.log('✅ [WEBHOOK] Análise recebida com sucesso!');
                 return data as MealAnalysis;
             } else {
+                console.error('❌ [WEBHOOK] Formato de resposta inválido. Esperava "calorias_totais_kcal"');
                 throw new Error('Invalid webhook response format');
             }
         } catch (error) {
             lastError = error as Error;
-            console.error(`Attempt ${attempt} failed:`, error);
+            console.error(`❌ [WEBHOOK] Tentativa ${attempt} falhou:`, error);
 
             // Wait before retry (except on last attempt)
             if (attempt < WEBHOOK_CONFIG.maxRetries) {
+                console.log(`⏳ [WEBHOOK] Aguardando ${WEBHOOK_CONFIG.retryDelay}ms antes da próxima tentativa...`);
                 await new Promise((resolve) => setTimeout(resolve, WEBHOOK_CONFIG.retryDelay));
             }
         }
     }
 
-    throw lastError || new Error('Failed to analyze meal photo');
+    console.error('❌ [WEBHOOK] Todas as tentativas falharam. Usando análise mock.');
+    console.error('❌ [WEBHOOK] Último erro:', lastError);
+
+    // Em vez de lançar erro, retorna mock para não quebrar a experiência do usuário
+    return getMockAnalysis();
 };
 
 // Mock analysis for development/testing
 const getMockAnalysis = (): MealAnalysis => {
+    console.log('🎭 [WEBHOOK] Usando análise MOCK');
     return {
         descricao: "Prato com frango grelhado, arroz integral e brócolis no vapor",
         calorias_totais_kcal: 450,
@@ -78,7 +111,7 @@ const getMockAnalysis = (): MealAnalysis => {
             { name: "Brócolis no Vapor", quantity: "100g", calories: 34, protein: 2.8, carbs: 7, fat: 0.4 },
             { name: "Azeite de Oliva", quantity: "1 colher (10ml)", calories: 90, protein: 0, carbs: 0, fat: 10 }
         ],
-        aviso_precisao: "Análise feita com base em estimativa visual. Valores podem variar ±15%."
+        aviso_precisao: "⚠️ ATENÇÃO: Esta é uma análise MOCK (de teste). O webhook real não respondeu corretamente."
     };
 };
 

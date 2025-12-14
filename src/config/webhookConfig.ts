@@ -7,7 +7,10 @@ export const WEBHOOK_CONFIG = {
     // Headers de autenticação
     headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_WEBHOOK_API_KEY || ''}`,
+        // Só adiciona Authorization se tiver API key
+        ...(import.meta.env.VITE_WEBHOOK_API_KEY ? {
+            'Authorization': `Bearer ${import.meta.env.VITE_WEBHOOK_API_KEY}`
+        } : {})
     },
 
     // Timeout em milissegundos (30 segundos)
