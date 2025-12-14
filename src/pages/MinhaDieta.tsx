@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Calendar, Utensils, Download, Calculator, User, FileText, LogOut, Camera } from "lucide-react";
+import { ArrowLeft, Calendar, Utensils, Download, Calculator, User, FileText, LogOut, Camera, ChefHat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,8 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { doc, updateDoc, deleteField } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { recipes } from "@/data/recipes";
+import { RecipeGrid } from "@/components/RecipeGrid";
 
 
 
@@ -154,7 +156,7 @@ const MinhaDieta = () => {
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Tabs defaultValue="dieta" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8 h-auto p-1 bg-secondary/50 rounded-xl">
+          <TabsList className="grid w-full grid-cols-3 mb-8 h-auto p-1 bg-secondary/50 rounded-xl">
             <TabsTrigger
               value="dieta"
               className="py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg transition-all"
@@ -168,6 +170,13 @@ const MinhaDieta = () => {
             >
               <Calculator className="mr-2 w-4 h-4" />
               Calculadora IMC
+            </TabsTrigger>
+            <TabsTrigger
+              value="receitas"
+              className="py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg transition-all"
+            >
+              <ChefHat className="mr-2 w-4 h-4" />
+              Receitas Fit
             </TabsTrigger>
           </TabsList>
 
@@ -402,6 +411,25 @@ const MinhaDieta = () => {
                     <div className="text-right text-foreground">&gt; 30</div>
                   </div>
                 </div>
+              </div>
+            </motion.div>
+          </TabsContent>
+
+          {/* ABA RECEITAS */}
+          <TabsContent value="receitas">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="bg-card rounded-3xl shadow-card p-6 md:p-8 border border-border">
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold text-foreground">Receitas Fit Exclusivas</h2>
+                  <p className="text-muted-foreground mt-2">
+                    Opções saudáveis selecionadas para você
+                  </p>
+                </div>
+
+                <RecipeGrid recipes={recipes} />
               </div>
             </motion.div>
           </TabsContent>
