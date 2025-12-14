@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.webhookPagamento = void 0;
+exports.analyzeMeal = exports.webhookPagamento = void 0;
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 admin.initializeApp();
@@ -43,7 +43,6 @@ exports.webhookPagamento = functions.https.onRequest(async (req, res) => {
             ((_z = payload.custom_fields) === null || _z === void 0 ? void 0 : _z.plan) ||
             extractPlanFromProduct(productName);
         console.log(`Dados extraídos: Email=${userEmail}, ID=${userId}, Plano=${plan}, Status=${paymentStatus}`);
-        // Verificar se o pagamento foi aprovado
         // Verificar se o pagamento foi aprovado
         // VegaCheckout muitas vezes manda "paid" ou "approved"
         const validStatuses = ["approved", "completed", "paid", "succeeded"];
@@ -112,4 +111,59 @@ function extractPlanFromProduct(productName) {
     }
     return "mensal";
 }
+// Função proxy para análise de refeição (resolve problema de CORS)
+// V2 Syntax: request object contains data and auth
+exports.analyzeMeal = functions.https.onCall(async (request) => {
+    // Try to handle both v1 and v2 or just assume v2 based on previous errors
+    // If request.data exists and it's not the payload but the wrapper, use it.
+    // Check if it's v2 (request has .auth)
+    const auth = request.auth;
+    const data = request.data;
+    // Verificar autenticação
+    if (!auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'O usuário deve estar autenticado para analisar refeições.');
+    }
+    const { imageUrl, userId, mealPhotoId, timestamp } = data;
+    const webhookUrl = 'https://webhook.nexaapp.online/webhook/fe75d6ee-4030-4147-a612-6b2c5f67cb2c';
+    console.log(`[PROXY] Iniciando análise para usuário ${auth.uid}`);
+    console.log(`[PROXY] Enviando para: ${webhookUrl}`);
+    try {
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                imageUrl,
+                userId: userId || auth.uid,
+                mealPhotoId,
+                timestamp: timestamp || new Date().toISOString()
+            }),
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[PROXY] Erro do webhook: ${response.status} - ${errorText}`);
+            throw new functions.https.HttpsError('internal', `Erro no serviço de análise: ${response.status}`);
+        }
+        const responseText = await response.text();
+        console.log('[PROXY] Resposta bruta do webhook:', responseText);
+        if (!responseText) {
+            console.warn('[PROXY] Resposta vazia do webhook');
+            return {};
+        }
+        try {
+            const responseData = JSON.parse(responseText);
+            console.log('[PROXY] Resposta JSON parseada com sucesso');
+            return responseData;
+        }
+        catch (e) {
+            console.error('[PROXY] Erro ao parsear JSON:', e);
+            throw new functions.https.HttpsError('internal', 'A resposta do serviço de análise não é um JSON válido.');
+        }
+    }
+    catch (error) {
+        console.error('[PROXY] Erro ao chamar webhook:', error);
+        throw new functions.https.HttpsError('internal', 'Falha ao conectar com serviço de análise.');
+    }
+});
 //# sourceMappingURL=index.js.map
