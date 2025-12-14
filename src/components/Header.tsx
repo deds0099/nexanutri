@@ -59,6 +59,15 @@ const Header = () => {
                 <User size={18} />
                 <span className="text-sm">{userData?.name || user.email?.split('@')[0]}</span>
               </div>
+              {hasActiveSubscription() && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/scanner")}
+                >
+                  Scanner
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -128,6 +137,15 @@ const Header = () => {
                     <User size={18} />
                     <span className="text-sm">{userData?.name || user.email?.split('@')[0]}</span>
                   </div>
+                  {hasActiveSubscription() && (
+                    <Button
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => navigate("/scanner")}
+                    >
+                      Scanner de Refeições
+                    </Button>
+                  )}
                   <Button
                     className="w-full"
                     onClick={handleDashboard}

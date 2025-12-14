@@ -11,6 +11,7 @@ import Assinatura from "./pages/Assinatura";
 import Dieta from "./pages/Dieta";
 import MinhaDieta from "./pages/MinhaDieta";
 import IMC from "./pages/IMC";
+import Scanner from "./pages/Scanner";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,11 @@ const App = () => (
             <Route path="/imc" element={
               <ProtectedRoute>
                 <IMC />
+              </ProtectedRoute>
+            } />
+            <Route path="/scanner" element={
+              <ProtectedRoute>
+                <Scanner />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
