@@ -82,41 +82,147 @@ const MinhaDieta = () => {
     try {
       toast.info("Gerando PDF...");
 
+      // 1. Capturar o canvas inteiro
       const canvas = await html2canvas(dietRef.current, {
         scale: 2,
         backgroundColor: "#ffffff",
-        windowWidth: 1440, // Força layout desktop para evitar cortes no mobile
-        useCORS: true, // Garante carregamento de imagens externas
+        windowWidth: 1440,
+        useCORS: true,
       });
 
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      // 2. Mapear posições de corte seguro
+      // Encontra todos os elementos marcados como indivisíveis
+      const sectionElements = dietRef.current.querySelectorAll('.pdf-section');
+      const safeBreaks: number[] = [];
+
+      // O offsetTop do elemento em relação ao container capturado
+      const containerTop = dietRef.current.offsetTop;
+
+      sectionElements.forEach((el) => {
+        if (el instanceof HTMLElement) {
+          // Precisamos da posição relativa ao topo do container capturado
+          // Se o container tiver padding, precisamos considerar isso?
+          // html2canvas captura o que está dentro do ref.
+          // O offsetTop é relativo ao offsetParent. Assumindo que dietRef é relativo ou tem um parent relativo.
+          // Vamos usar getBoundingClientRect para ser mais seguro.
+          const rect = el.getBoundingClientRect();
+          const containerRect = dietRef.current!.getBoundingClientRect();
+
+          const relativeTop = rect.top - containerRect.top;
+          // const relativeBottom = rect.bottom - containerRect.top;
+
+          safeBreaks.push(relativeTop);
+        }
+      });
+
+      // Ordenar por posição (deve estar na ordem do DOM, mas garante)
+      safeBreaks.sort((a, b) => a - b);
 
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
 
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      // Altura da página A4 em pixels do canvas
       const ratio = pdfWidth / imgWidth;
-      const totalPDFHeight = imgHeight * ratio;
+      const pageHeightPx = pdfHeight / ratio;
 
-      let heightLeft = totalPDFHeight;
-      let position = 0;
+      let currentY = 0;
 
-      // Primeira página
-      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, totalPDFHeight);
-      heightLeft -= pdfHeight;
+      while (currentY < imgHeight) {
+        // Altura restante da imagem
+        const remainingHeight = imgHeight - currentY;
 
-      // Páginas subsequentes
-      while (heightLeft > 0) {
-        position -= pdfHeight; // Move a imagem para cima
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, totalPDFHeight);
-        heightLeft -= pdfHeight;
+        // Altura dessa página (inicialmente tenta preencher a página toda ou o que sobra)
+        let sliceHeight = Math.min(remainingHeight, pageHeightPx);
+
+        // Se a fatia for menor que a página, é a última. Se for igual, verifica corte.
+        if (sliceHeight === pageHeightPx) {
+          const splitAt = currentY + pageHeightPx;
+
+          // Verifica se o corte cai "dentro" de uma seção (ou muito perto do topo de uma)
+          // Mas nossa lista safeBreaks tem o TOPO de cada seção.
+          // Queremos cortar ANTES de uma seção se o corte atual for cair no meio dela.
+          // Ou seja, encontramos a última seção que começa ANTES do corte, e vemos se ela termina DEPOIS do corte?
+          // Mais simples: procurar o break point ideal.
+          // Encontrar o maior "safeBreak" que seja MENOR que "splitAt" e MAIOR que "currentY".
+
+          // Uma seção começa em `breakPoint`. Se `splitAt` for > `breakPoint` (começou a seção) 
+          // mas a seção ainda não acabou... difícil saber onde acaba sem medir altura.
+          // Vamos assumir que se cortarmos um pouco antes não tem problema (espaço em branco no fim da pag anterior).
+
+          // Estratégia: Encontrar a seção que está sendo "atropelada".
+          let bestSplit = splitAt;
+
+          // Itera sobre as seções para ver se alguma começa ANTES do splitAt mas termina DEPOIS dele?
+          // Simplificação: Se cortarmos exatamente em splitAt, pegamos o último "safeBreak" (inicio de seção) 
+          // que ocorreu antes de splitAt e vemos se ele está "perto demais" do fim, indicando que cortamos a seção logo no começo?
+          // NÃO. Se cortarmos em splitAt, corremos o risco de cortar o MEIO de uma seção.
+          // Então devemos recuar o corte para o INÍCIO da seção que foi cortada.
+          // A seção cortada é aquela cujo START é < splitAt e END > splitAt.
+          // Não temos END fácil. Mas temos o START da PRÓXIMA seção?
+
+          // Vamos usar os safeBreaks para encontrar um ponto de corte ANTERIOR ao splitAt mais próximo.
+          // Quero o maior valor de `safeBreaks` tal que `val < splitAt` e `val > currentY`.
+          // Se esse valor estiver "perto" de splitAt (digamos, a menos de X pixels), então cortamos nele.
+          // Mas e se a seção for gigante (maior que a página)? Aí não tem jeito, corta no meio.
+
+          // Vamos pegar todos os candidatos de corte (inícios de seção) que estão na página atual.
+          const candidates = safeBreaks.filter(y => y > currentY && y < splitAt);
+
+          if (candidates.length > 0) {
+            // O último candidato é o início da última seção que cabe INTEIRA (ou começa) na página.
+            // Se nós cortarmos em `splitAt`, vamos incluir o começo dessa seção e cortar o resto.
+            // O ideal é cortar EXATAMENTE no início dessa seção (candidates[candidates.length - 1]),
+            // para que ela fique toda na próxima página.
+            // EXCEÇÃO: Se cortar ali deixar a página muito vazia (ex: seção começa no topo), não adianta.
+
+            // Vamos pegar o último início de seção.
+            const lastSafeY = candidates[candidates.length - 1];
+
+            // Se recuarmos o corte para lastSafeY, quanto perdemos de página?
+            const lostSpace = splitAt - lastSafeY;
+
+            // Se perdemos menos que, digamos, 50% da página, vale a pena quebrar antes para não cortar a seção.
+            if (lostSpace < pageHeightPx * 0.6) {
+              sliceHeight = lastSafeY - currentY;
+            }
+          }
+        }
+
+        // Criar um canvas temporário para essa fatia
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = imgWidth;
+        tempCanvas.height = sliceHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        if (tempCtx) {
+          tempCtx.drawImage(
+            canvas,
+            0, currentY, imgWidth, sliceHeight, // Source crop
+            0, 0, imgWidth, sliceHeight         // Dest pos
+          );
+
+          const sliceData = tempCanvas.toDataURL('image/png');
+
+          if (currentY > 0) pdf.addPage();
+
+          // Adiciona a imagem. A altura no PDF será proporcional.
+          // sliceHeight (px) -> pdfHeight (mm) ? Não.
+          // A largura é fixa (pdfWidth). A altura deve manter a proporção.
+          const pdfSliceHeight = sliceHeight * ratio;
+          pdf.addImage(sliceData, 'PNG', 0, 0, pdfWidth, pdfSliceHeight);
+        }
+
+        currentY += sliceHeight;
+
+        // Evitar loop infinito por precisão de float
+        if (sliceHeight < 1) break;
       }
 
       pdf.save(`Dieta_NexaNutri_${userData?.name || "Usuario"}.pdf`);
-
       toast.success("PDF baixado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
@@ -243,7 +349,7 @@ const MinhaDieta = () => {
 
               {/* Área imprimível */}
               <div ref={dietRef} className="bg-card rounded-2xl p-6 md:p-8 shadow-card border border-border">
-                <div className="flex flex-col md:flex-row items-center justify-between mb-8 pb-6 border-b border-border gap-4">
+                <div className="flex flex-col md:flex-row items-center justify-between mb-8 pb-6 border-b border-border gap-4 pdf-section">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-secondary rounded-2xl flex items-center justify-center">
                       <Calendar className="text-primary" size={32} />
@@ -266,7 +372,7 @@ const MinhaDieta = () => {
                 </div>
 
                 {diet?.macros && (
-                  <div className="grid grid-cols-3 gap-4 mb-8">
+                  <div className="grid grid-cols-3 gap-4 mb-8 pdf-section">
                     <div className="bg-blue-500/10 p-4 rounded-xl text-center border border-blue-500/20">
                       <p className="text-2xl font-bold text-blue-600">{diet.macros.protein.g}g</p>
                       <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Proteínas ({diet.macros.protein.pct}%)</p>
@@ -283,7 +389,7 @@ const MinhaDieta = () => {
                 )}
 
                 {diet?.warnings && diet.warnings.length > 0 && (
-                  <div className="mb-8 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+                  <div className="mb-8 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl pdf-section">
                     <h4 className="font-bold text-yellow-600 mb-2 flex items-center gap-2">⚠️ Atenção</h4>
                     <ul className="list-disc list-inside text-sm text-yellow-700">
                       {diet.warnings.map((w: string, i: number) => (
@@ -315,7 +421,7 @@ const MinhaDieta = () => {
                     </div>
                   ) : (
                     refeicoes.map((refeicao, index) => (
-                      <div key={index} className="flex flex-col md:flex-row gap-4 p-4 rounded-xl hover:bg-secondary/20 transition-colors border border-transparent hover:border-border">
+                      <div key={index} className="flex flex-col md:flex-row gap-4 p-4 rounded-xl hover:bg-secondary/20 transition-colors border border-transparent hover:border-border pdf-section">
                         <div className="flex-shrink-0 flex md:flex-col items-center gap-3 md:w-24">
                           <div className="w-10 h-10 bg-secondary rounded-full flex items-center justify-center">
                             <Utensils className="text-primary" size={18} />
@@ -344,7 +450,7 @@ const MinhaDieta = () => {
                   )}
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-border flex items-center justify-center gap-2 text-muted-foreground text-sm">
+                <div className="mt-8 pt-6 border-t border-border flex items-center justify-center gap-2 text-muted-foreground text-sm pdf-section">
                   <img src={logoNexa} alt="NexaNutri" className="w-6 h-6 grayscale opacity-50" />
                   <span>Gerado via NexaNutri Premium</span>
                 </div>
