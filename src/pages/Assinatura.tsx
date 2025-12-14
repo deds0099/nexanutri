@@ -19,7 +19,7 @@ const plans = [
       "Dieta personalizada",
       "Calculadora IMC",
       "Receitas exclusivas",
-      "Suporte via chat",
+      "Sem fidelidade",
     ],
     popular: false,
   },
@@ -53,7 +53,7 @@ const plans = [
     checkoutUrl: "https://checkout.pagamentonexa.shop/VCCL1O8SCM1G",
     features: [
       "Tudo do plano semestral",
-      "Consulta com nutricionista",
+      "Menor preço mensal",
       "Acesso vitalício às receitas",
       "Bônus exclusivos",
     ],

@@ -68,6 +68,15 @@ const Header = () => {
                   Scanner
                 </Button>
               )}
+              {hasActiveSubscription() && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/receitas")}
+                >
+                  Receitas Fit
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -144,6 +153,15 @@ const Header = () => {
                       onClick={() => navigate("/scanner")}
                     >
                       Scanner de Refeições
+                    </Button>
+                  )}
+                  {hasActiveSubscription() && (
+                    <Button
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => navigate("/receitas")}
+                    >
+                      Receitas Fit
                     </Button>
                   )}
                   <Button

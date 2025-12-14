@@ -13,6 +13,7 @@ import MinhaDieta from "./pages/MinhaDieta";
 import IMC from "./pages/IMC";
 import Scanner from "./pages/Scanner";
 import NotFound from "./pages/NotFound";
+import Receitas from "./pages/Receitas";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,11 @@ const App = () => (
             <Route path="/scanner" element={
               <ProtectedRoute>
                 <Scanner />
+              </ProtectedRoute>
+            } />
+            <Route path="/receitas" element={
+              <ProtectedRoute>
+                <Receitas />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
