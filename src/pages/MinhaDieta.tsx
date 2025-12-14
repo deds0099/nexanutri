@@ -353,21 +353,12 @@ const MinhaDieta = () => {
 
                           {/* Verifica se tem opções múltiplas (novo formato) ou simples (antigo) */}
                           {refeicao.options && refeicao.options.length > 0 ? (
-                            <Tabs defaultValue="opt-0" className="w-full">
-                              <TabsList className="flex flex-wrap w-full h-auto p-1 bg-secondary/30 rounded-lg mb-3">
-                                {refeicao.options.map((opt: any, optIdx: number) => (
-                                  <TabsTrigger
-                                    key={optIdx}
-                                    value={`opt-${optIdx}`}
-                                    className="flex-1 py-1.5 text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md transition-all"
-                                  >
-                                    {opt.name}
-                                  </TabsTrigger>
-                                ))}
-                              </TabsList>
-
+                            <div className="space-y-4">
                               {refeicao.options.map((opt: any, optIdx: number) => (
-                                <TabsContent key={optIdx} value={`opt-${optIdx}`} className="mt-0 space-y-2">
+                                <div key={optIdx} className="bg-secondary/30 rounded-lg p-3">
+                                  <p className="text-sm font-semibold text-primary mb-2 border-b border-primary/20 pb-1">
+                                    {opt.name}
+                                  </p>
                                   <ul className="grid md:grid-cols-2 gap-2">
                                     {opt.items.map((item: string, i: number) => (
                                       <li key={i} className="flex items-center gap-2 text-sm text-foreground/80">
@@ -376,9 +367,9 @@ const MinhaDieta = () => {
                                       </li>
                                     ))}
                                   </ul>
-                                </TabsContent>
+                                </div>
                               ))}
-                            </Tabs>
+                            </div>
                           ) : (
                             /* Fallback para dietas antigas */
                             <ul className="grid md:grid-cols-2 gap-2">
