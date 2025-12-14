@@ -14,7 +14,7 @@ const plans = [
     period: "/mês",
     totalPrice: "9,99",
     duration: 1,
-    checkoutUrl: "https://checkout.nexaapp.online/VCCL1O8SCM1E",
+    checkoutUrl: "https://checkout.pagamentonexa.shop/VCCL1O8SCM1E",
     features: [
       "Dieta personalizada",
       "Calculadora IMC",
@@ -32,7 +32,7 @@ const plans = [
     totalPrice: "47,94",
     installments: "6x de R$7,99",
     duration: 6,
-    checkoutUrl: "https://checkout.nexaapp.online/VCCL1O8SCM1F",
+    checkoutUrl: "https://checkout.pagamentonexa.shop/VCCL1O8SCM1F",
     features: [
       "Tudo do plano mensal",
       "Atualizações semanais",
@@ -50,7 +50,7 @@ const plans = [
     totalPrice: "71,88",
     installments: "12x de R$5,99",
     duration: 12,
-    checkoutUrl: "https://checkout.nexaapp.online/VCCL1O8SCM1G",
+    checkoutUrl: "https://checkout.pagamentonexa.shop/VCCL1O8SCM1G",
     features: [
       "Tudo do plano semestral",
       "Consulta com nutricionista",
