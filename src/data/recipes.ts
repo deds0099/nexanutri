@@ -169,7 +169,7 @@ export const recipes: Recipe[] = [
     {
         id: 8,
         title: "Tapioca de Queijo Branco e Tomate",
-        image: "https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?w=800&auto=format&fit=crop&q=60",
+        image: "https://images.unsplash.com/photo-MJvFMOs-t0c?w=800&auto=format&fit=crop&q=60",
         time: "10 min",
         calories: 300,
         tags: ["Café da Manhã", "Sem Glúten", "Rápido"],
@@ -188,7 +188,7 @@ export const recipes: Recipe[] = [
     {
         id: 9,
         title: "Espaguete de Abobrinha à Bolonhesa",
-        image: "https://images.unsplash.com/photo-1555543788-297587d55375?w=800&auto=format&fit=crop&q=60",
+        image: "https://images.unsplash.com/photo-YQdNv7ftTdo?w=800&auto=format&fit=crop&q=60",
         time: "25 min",
         calories: 380,
         tags: ["Jantar", "Low Carb", "Keto"],
@@ -229,7 +229,7 @@ export const recipes: Recipe[] = [
     {
         id: 11,
         title: " mingau de Aveia Proteico",
-        image: "https://images.unsplash.com/photo-1505253304499-02095fe41708?w=800&auto=format&fit=crop&q=60",
+        image: "https://images.unsplash.com/photo-xO8kmONtTDk?w=800&auto=format&fit=crop&q=60",
         time: "10 min",
         calories: 290,
         tags: ["Café da Manhã", "Pré-treino", "High Protein"],
@@ -249,7 +249,7 @@ export const recipes: Recipe[] = [
     {
         id: 12,
         title: "Tacos de Alface com Carne",
-        image: "https://images.unsplash.com/photo-1624300603348-e8cb7b3c25d8?w=800&auto=format&fit=crop&q=60",
+        image: "https://images.unsplash.com/photo-r39ZMmMXN94?w=800&auto=format&fit=crop&q=60",
         time: "20 min",
         calories: 340,
         tags: ["Jantar", "Low Carb", "Divertido"],
