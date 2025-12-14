@@ -90,7 +90,7 @@ export const RecipeGrid = ({ recipes }: RecipeGridProps) => {
                                         </div>
                                     </div>
 
-                                    <ScrollArea className="flex-1 p-6">
+                                    <ScrollArea className="flex-1 p-6 min-h-0 w-full">
                                         <div className="space-y-6">
                                             <div>
                                                 <p className="text-muted-foreground mb-4">{recipe.description}</p>
