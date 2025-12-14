@@ -92,9 +92,29 @@ const MinhaDieta = () => {
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+
+      const ratio = pdfWidth / imgWidth;
+      const totalPDFHeight = imgHeight * ratio;
+
+      let heightLeft = totalPDFHeight;
+      let position = 0;
+
+      // Primeira página
+      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, totalPDFHeight);
+      heightLeft -= pdfHeight;
+
+      // Páginas subsequentes
+      while (heightLeft > 0) {
+        position -= pdfHeight; // Move a imagem para cima
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, totalPDFHeight);
+        heightLeft -= pdfHeight;
+      }
+
       pdf.save(`Dieta_NexaNutri_${userData?.name || "Usuario"}.pdf`);
 
       toast.success("PDF baixado com sucesso!");
