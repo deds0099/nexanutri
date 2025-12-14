@@ -144,6 +144,10 @@ const Scanner = () => {
 
                 // Reload meals
                 await loadTodaysMeals();
+
+                // Reset capture interface for next photo
+                setShowCapture(false);
+                setCurrentAnalysis(null);
             }
         } catch (error) {
             console.error('Error processing meal photo:', error);

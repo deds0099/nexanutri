@@ -2,7 +2,7 @@
 // Uso: node test-webhook-n8n.js
 // Requer Node.js 18+ (fetch API nativa)
 
-const WEBHOOK_URL = 'https://webhook.nexaapp.online/webhook/fe75d6ee-4030-4147-a612-6b2c5f67cb2c';
+const WEBHOOK_URL = 'https://webhook.nexaapp.online/webhook/nexa';
 
 async function testWebhook() {
     console.log('🔍 Testando webhook N8N...');

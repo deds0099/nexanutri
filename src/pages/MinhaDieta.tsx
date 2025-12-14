@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Calendar, Utensils, Download, Calculator, User, FileText, LogOut } from "lucide-react";
+import { ArrowLeft, Calendar, Utensils, Download, Calculator, User, FileText, LogOut, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -118,6 +118,10 @@ const MinhaDieta = () => {
       <header className="bg-card border-b border-border sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/')} title="Voltar ao Início">
+              <ArrowLeft size={24} className="text-foreground" />
+            </Button>
+
             {/* Debug UI removed */}
 
             <img src={logoNexa} alt="NexaNutri" className="w-10 h-10" />
@@ -130,6 +134,17 @@ const MinhaDieta = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => navigate('/scanner')}
+              className="gap-2 bg-primary hover:bg-primary/90 text-white shadow-sm"
+              title="Scanner de Alimentos"
+            >
+              <Camera size={18} />
+              <span className="hidden sm:inline">Scanner</span>
+            </Button>
+
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut size={20} className="text-muted-foreground" />
             </Button>

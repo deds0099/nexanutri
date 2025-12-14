@@ -124,40 +124,134 @@ exports.analyzeMeal = functions.https.onCall(async (request) => {
         throw new functions.https.HttpsError('unauthenticated', 'O usuário deve estar autenticado para analisar refeições.');
     }
     const { imageUrl, userId, mealPhotoId, timestamp } = data;
-    const webhookUrl = 'https://webhook.nexaapp.online/webhook/fe75d6ee-4030-4147-a612-6b2c5f67cb2c';
+    const webhookUrl = 'https://webhook.nexaapp.online/webhook/nexa';
     console.log(`[PROXY] Iniciando análise para usuário ${auth.uid}`);
+    console.log(`[PROXY] Baixando imagem de: ${imageUrl}`);
     console.log(`[PROXY] Enviando para: ${webhookUrl}`);
     try {
+        // 1. Download image from URL
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+            console.error(`[PROXY] Falha ao baixar imagem: ${imageResponse.status}`);
+            throw new functions.https.HttpsError('invalid-argument', 'Não foi possível acessar a imagem fornecida.');
+        }
+        const imageBlob = await imageResponse.blob();
+        console.log(`[PROXY] Imagem baixada. Tamanho: ${imageBlob.size} bytes`);
+        // 2. Prepare FormData
+        const formData = new FormData();
+        formData.append('file', imageBlob, 'image.jpg');
+        formData.append('userId', userId || auth.uid);
+        formData.append('mealPhotoId', mealPhotoId);
+        formData.append('timestamp', timestamp || new Date().toISOString());
+        // 3. Send to Webhook as multipart/form-data
+        // Nota: fetch com FormData automaticamente seta o Content-Type: multipart/form-data com boundary
         const response = await fetch(webhookUrl, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                imageUrl,
-                userId: userId || auth.uid,
-                mealPhotoId,
-                timestamp: timestamp || new Date().toISOString()
-            }),
+            body: formData,
         });
+        console.log(`[PROXY] Response Status: ${response.status}`);
+        console.log(`[PROXY] Response Headers:`, Object.fromEntries(response.headers.entries()));
+        console.log(`[PROXY] Response OK: ${response.ok}`);
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`[PROXY] Erro do webhook: ${response.status} - ${errorText}`);
             throw new functions.https.HttpsError('internal', `Erro no serviço de análise: ${response.status}`);
         }
         const responseText = await response.text();
-        console.log('[PROXY] Resposta bruta do webhook:', responseText);
-        if (!responseText) {
-            console.warn('[PROXY] Resposta vazia do webhook');
-            return {};
+        console.log('[PROXY] Resposta bruta do webhook (primeiros 500 chars):', responseText.substring(0, 500));
+        console.log('[PROXY] Tamanho da resposta:', responseText.length, 'bytes');
+        if (!responseText || responseText.trim() === '') {
+            console.error('[PROXY] ❌ Resposta vazia do webhook! O N8N pode não estar retornando dados.');
+            console.error('[PROXY] Verifique se o workflow N8N:');
+            console.error('[PROXY] 1. Está em modo "Wait for Response"');
+            console.error('[PROXY] 2. Tem um nó "Respond to Webhook" no final');
+            console.error('[PROXY] 3. O nó está retornando JSON com os dados de análise');
+            throw new functions.https.HttpsError('internal', 'O webhook retornou resposta vazia. Verifique configuração do N8N.');
         }
         try {
-            const responseData = JSON.parse(responseText);
-            console.log('[PROXY] Resposta JSON parseada com sucesso');
+            let responseData = JSON.parse(responseText);
+            console.log('[PROXY] ✅ Resposta JSON parseada com sucesso');
+            console.log('[PROXY] Tipo de resposta:', Array.isArray(responseData) ? 'Array' : 'Object');
+            // N8N pode retornar array com objeto output: [{output: {...}}]
+            // Extrair o objeto correto
+            if (Array.isArray(responseData) && responseData.length > 0) {
+                console.log('[PROXY] Resposta é array, extraindo primeiro elemento');
+                responseData = responseData[0];
+            }
+            // Se tem propriedade 'output', extrair
+            if (responseData.output) {
+                console.log('[PROXY] Resposta tem propriedade "output", extraindo...');
+                responseData = responseData.output;
+            }
+            console.log('[PROXY] Campos recebidos:', Object.keys(responseData));
+            // Normalizar valores que podem vir como strings com unidades
+            // Ex: "220 kcal" -> 220, "12 g" -> 12
+            const normalizeNumber = (value) => {
+                if (typeof value === 'number')
+                    return value;
+                if (typeof value === 'string') {
+                    // Remover texto e manter apenas números
+                    const match = value.match(/[\d.]+/);
+                    return match ? parseFloat(match[0]) : 0;
+                }
+                return 0;
+            };
+            // Normalizar calorias
+            if (responseData.calorias_totais_kcal) {
+                const originalValue = responseData.calorias_totais_kcal;
+                responseData.calorias_totais_kcal = normalizeNumber(originalValue);
+                console.log(`[PROXY] Calorias normalizadas: "${originalValue}" -> ${responseData.calorias_totais_kcal}`);
+            }
+            // Normalizar macronutrientes
+            if (responseData.macro_nutrientes) {
+                const macros = responseData.macro_nutrientes;
+                if (macros.proteinas_g) {
+                    macros.proteinas_g = normalizeNumber(macros.proteinas_g);
+                }
+                if (macros.carboidratos_g) {
+                    macros.carboidratos_g = normalizeNumber(macros.carboidratos_g);
+                }
+                if (macros.gorduras_totais_g) {
+                    macros.gorduras_totais_g = normalizeNumber(macros.gorduras_totais_g);
+                }
+                console.log('[PROXY] Macros normalizados:', macros);
+            }
+            // Normalizar detalhes
+            if (responseData.detalhes) {
+                const detalhes = responseData.detalhes;
+                if (detalhes.fibras_g)
+                    detalhes.fibras_g = normalizeNumber(detalhes.fibras_g);
+                if (detalhes.acucares_g)
+                    detalhes.acucares_g = normalizeNumber(detalhes.acucares_g);
+                if (detalhes.sodio_mg)
+                    detalhes.sodio_mg = normalizeNumber(detalhes.sodio_mg);
+                if (detalhes.gorduras_saturadas_g) {
+                    detalhes.gorduras_saturadas_g = normalizeNumber(detalhes.gorduras_saturadas_g);
+                }
+            }
+            // Normalizar ingredientes
+            if (responseData.ingredientes && Array.isArray(responseData.ingredientes)) {
+                responseData.ingredientes = responseData.ingredientes.map((ing) => ({
+                    name: ing.name || '',
+                    quantity: ing.quantity || '',
+                    calories: normalizeNumber(ing.calories),
+                    protein: normalizeNumber(ing.protein),
+                    carbs: normalizeNumber(ing.carbs),
+                    fat: normalizeNumber(ing.fat),
+                }));
+            }
+            // Validar se tem os campos esperados
+            if (!responseData.calorias_totais_kcal && !responseData.descricao) {
+                console.warn('[PROXY] ⚠️ Resposta não tem campos esperados:', responseData);
+            }
+            else {
+                console.log('[PROXY] ✅ Dados normalizados e validados com sucesso');
+            }
             return responseData;
         }
         catch (e) {
             console.error('[PROXY] Erro ao parsear JSON:', e);
+            console.error('[PROXY] Resposta recebida não é JSON válido:', responseText.substring(0, 200));
             throw new functions.https.HttpsError('internal', 'A resposta do serviço de análise não é um JSON válido.');
         }
     }
