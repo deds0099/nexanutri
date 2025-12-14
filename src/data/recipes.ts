@@ -80,7 +80,7 @@ export const recipes: Recipe[] = [
     {
         id: 4,
         title: "Salmão Assado com Aspargos",
-        image: "https://images.unsplash.com/photo-1467003909585-2f8a7270028d?w=800&auto=format&fit=crop&q=60",
+        image: "https://images.unsplash.com/photo-1543339308-43e59d6b73a6?w=800&auto=format&fit=crop&q=60",
         time: "30 min",
         calories: 450,
         tags: ["Jantar", "Omega 3", "Keto"],
@@ -144,6 +144,127 @@ export const recipes: Recipe[] = [
             "Adicione a alface e a cenoura.",
             "Enrole bem firme e corte ao meio.",
             "Sirva frio."
+        ]
+    },
+    {
+        id: 7,
+        title: "Iogurte com Granola e Frutas",
+        image: "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=800&auto=format&fit=crop&q=60",
+        time: "5 min",
+        calories: 210,
+        tags: ["Café da Manhã", "Vegetariano", "Fibras"],
+        description: "Uma tigela nutritiva e refrescante de iogurte natural com granola caseira.",
+        ingredients: [
+            "1 pote de iogurte natural desnatado",
+            "2 colheres de sopa de granola sem açúcar",
+            "1/2 maçã picada",
+            "1 fio de mel"
+        ],
+        instructions: [
+            "Coloque o iogurte em uma tigela.",
+            "Cubra com a granola e a maçã.",
+            "Finalize com o mel e sirva."
+        ]
+    },
+    {
+        id: 8,
+        title: "Tapioca de Queijo Branco e Tomate",
+        image: "https://images.unsplash.com/photo-1587411768638-ec71bdd29f95?w=800&auto=format&fit=crop&q=60",
+        time: "10 min",
+        calories: 300,
+        tags: ["Café da Manhã", "Sem Glúten", "Rápido"],
+        description: "Tapioca fininha recheada com queijo cottage e temperos frescos.",
+        ingredients: [
+            "3 colheres de sopa de goma de tapioca",
+            "2 colheres de queijo cottage",
+            "Tomate picado e orégano"
+        ],
+        instructions: [
+            "Peneire a goma em uma frigideira quente.",
+            "Quando firmar, adicione o recheio.",
+            "Dobre ao meio e sirva quente."
+        ]
+    },
+    {
+        id: 9,
+        title: "Espaguete de Abobrinha à Bolonhesa",
+        image: "https://images.unsplash.com/photo-1554522438-f99a4c5fb5a7?w=800&auto=format&fit=crop&q=60",
+        time: "25 min",
+        calories: 380,
+        tags: ["Jantar", "Low Carb", "Keto"],
+        description: "Substitua a massa tradicional por fios de abobrinha nutritivos.",
+        ingredients: [
+            "1 abobrinha grande fatiada em fios",
+            "150g de carne moída magra",
+            "Molho de tomate caseiro",
+            "Manjericão fresco"
+        ],
+        instructions: [
+            "Refogue a carne moída com temperos.",
+            "Adicione o molho de tomate.",
+            "Em outra panela, passe a abobrinha rapidamente no azeite.",
+            "Sirva a abobrinha com o molho por cima."
+        ]
+    },
+    {
+        id: 10,
+        title: "Poke de Salmão Fit",
+        image: "https://images.unsplash.com/photo-1546069901-d5bfd2cbfb1f?w=800&auto=format&fit=crop&q=60",
+        time: "20 min",
+        calories: 420,
+        tags: ["Almoço", "Omega 3", "Bowl"],
+        description: "Tigela havaiana saudável com cubos de salmão e arroz integral.",
+        ingredients: [
+            "100g de salmão cru em cubos",
+            "1/2 xícara de arroz integral cozido",
+            "Pepino, manga e cenoura em cubos",
+            "Molho de soja light e gergelim"
+        ],
+        instructions: [
+            "Monte o bowl começando pelo arroz.",
+            "Disponha o salmão e os acompanhamentos ao redor.",
+            "Regue com o molho e salpique gergelim."
+        ]
+    },
+    {
+        id: 11,
+        title: " mingau de Aveia Proteico",
+        image: "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=800&auto=format&fit=crop&q=60",
+        time: "10 min",
+        calories: 290,
+        tags: ["Café da Manhã", "Pré-treino", "High Protein"],
+        description: "Mingau cremoso enriquecido com whey protein ou claras.",
+        ingredients: [
+            "3 colheres de aveia em flocos",
+            "200ml de leite desnatado ou água",
+            "1 scoop de whey protein baunilha",
+            "Morangos picados para decorar"
+        ],
+        instructions: [
+            "Cozinhe a aveia com o leite até engrossar.",
+            "Espere amornar um pouco e misture o whey.",
+            "Sirva com os morangos por cima."
+        ]
+    },
+    {
+        id: 12,
+        title: "Tacos de Alface com Carne",
+        image: "https://images.unsplash.com/photo-1624300626419-4da3954e9280?w=800&auto=format&fit=crop&q=60",
+        time: "20 min",
+        calories: 340,
+        tags: ["Jantar", "Low Carb", "Divertido"],
+        description: "Versão leve dos tacos mexicanos usando folhas de alface.",
+        ingredients: [
+            "Folhas de alface americana lavadas",
+            "200g de patinho moído temperado",
+            "Vinagrete de tomate e cebola",
+            "Abacate em cubos"
+        ],
+        instructions: [
+            "Refogue a carne até ficar bem sequinha.",
+            "Use as folhas de alface como 'conchas'.",
+            "Recheie com carne, vinagrete e abacate.",
+            "Coma com as mãos!"
         ]
     }
 ];
