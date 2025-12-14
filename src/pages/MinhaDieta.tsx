@@ -80,146 +80,47 @@ const MinhaDieta = () => {
     if (!dietRef.current) return;
 
     try {
-      toast.info("Gerando PDF...");
-
-      // 1. Capturar o canvas inteiro
-      const canvas = await html2canvas(dietRef.current, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-        windowWidth: 1440,
-        useCORS: true,
-      });
-
-      // 2. Mapear posições de corte seguro
-      // Encontra todos os elementos marcados como indivisíveis
-      const sectionElements = dietRef.current.querySelectorAll('.pdf-section');
-      const safeBreaks: number[] = [];
-
-      // O offsetTop do elemento em relação ao container capturado
-      const containerTop = dietRef.current.offsetTop;
-
-      sectionElements.forEach((el) => {
-        if (el instanceof HTMLElement) {
-          // Precisamos da posição relativa ao topo do container capturado
-          // Se o container tiver padding, precisamos considerar isso?
-          // html2canvas captura o que está dentro do ref.
-          // O offsetTop é relativo ao offsetParent. Assumindo que dietRef é relativo ou tem um parent relativo.
-          // Vamos usar getBoundingClientRect para ser mais seguro.
-          const rect = el.getBoundingClientRect();
-          const containerRect = dietRef.current!.getBoundingClientRect();
-
-          const relativeTop = rect.top - containerRect.top;
-          // const relativeBottom = rect.bottom - containerRect.top;
-
-          safeBreaks.push(relativeTop);
-        }
-      });
-
-      // Ordenar por posição (deve estar na ordem do DOM, mas garante)
-      safeBreaks.sort((a, b) => a - b);
-
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
+      toast.info("Gerando PDF... Isso pode levar alguns segundos.");
 
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      // Altura da página A4 em pixels do canvas
-      const ratio = pdfWidth / imgWidth;
-      const pageHeightPx = pdfHeight / ratio;
+      const margin = 10; // Margem de 10mm
+      const contentWidth = pdfWidth - (margin * 2);
 
-      let currentY = 0;
+      let currentY = margin;
 
-      while (currentY < imgHeight) {
-        // Altura restante da imagem
-        const remainingHeight = imgHeight - currentY;
+      // Selecionar todos os elementos marcados como seções (cabeçalho, macros, avisos, cada refeição, rodapé)
+      const sections = Array.from(dietRef.current.querySelectorAll('.pdf-section'));
 
-        // Altura dessa página (inicialmente tenta preencher a página toda ou o que sobra)
-        let sliceHeight = Math.min(remainingHeight, pageHeightPx);
+      for (const section of sections) {
+        if (!(section instanceof HTMLElement)) continue;
 
-        // Se a fatia for menor que a página, é a última. Se for igual, verifica corte.
-        if (sliceHeight === pageHeightPx) {
-          const splitAt = currentY + pageHeightPx;
+        // Captura cada seção individualmente
+        const canvas = await html2canvas(section, {
+          scale: 2,
+          backgroundColor: "#ffffff",
+          windowWidth: 1440, // Importante para layout responsivo
+          useCORS: true,
+        });
 
-          // Verifica se o corte cai "dentro" de uma seção (ou muito perto do topo de uma)
-          // Mas nossa lista safeBreaks tem o TOPO de cada seção.
-          // Queremos cortar ANTES de uma seção se o corte atual for cair no meio dela.
-          // Ou seja, encontramos a última seção que começa ANTES do corte, e vemos se ela termina DEPOIS do corte?
-          // Mais simples: procurar o break point ideal.
-          // Encontrar o maior "safeBreak" que seja MENOR que "splitAt" e MAIOR que "currentY".
+        const imgData = canvas.toDataURL("image/png");
 
-          // Uma seção começa em `breakPoint`. Se `splitAt` for > `breakPoint` (começou a seção) 
-          // mas a seção ainda não acabou... difícil saber onde acaba sem medir altura.
-          // Vamos assumir que se cortarmos um pouco antes não tem problema (espaço em branco no fim da pag anterior).
+        // Calcula altura proporcional
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = contentWidth / imgWidth;
+        const sectionHeight = imgHeight * ratio;
 
-          // Estratégia: Encontrar a seção que está sendo "atropelada".
-          let bestSplit = splitAt;
-
-          // Itera sobre as seções para ver se alguma começa ANTES do splitAt mas termina DEPOIS dele?
-          // Simplificação: Se cortarmos exatamente em splitAt, pegamos o último "safeBreak" (inicio de seção) 
-          // que ocorreu antes de splitAt e vemos se ele está "perto demais" do fim, indicando que cortamos a seção logo no começo?
-          // NÃO. Se cortarmos em splitAt, corremos o risco de cortar o MEIO de uma seção.
-          // Então devemos recuar o corte para o INÍCIO da seção que foi cortada.
-          // A seção cortada é aquela cujo START é < splitAt e END > splitAt.
-          // Não temos END fácil. Mas temos o START da PRÓXIMA seção?
-
-          // Vamos usar os safeBreaks para encontrar um ponto de corte ANTERIOR ao splitAt mais próximo.
-          // Quero o maior valor de `safeBreaks` tal que `val < splitAt` e `val > currentY`.
-          // Se esse valor estiver "perto" de splitAt (digamos, a menos de X pixels), então cortamos nele.
-          // Mas e se a seção for gigante (maior que a página)? Aí não tem jeito, corta no meio.
-
-          // Vamos pegar todos os candidatos de corte (inícios de seção) que estão na página atual.
-          const candidates = safeBreaks.filter(y => y > currentY && y < splitAt);
-
-          if (candidates.length > 0) {
-            // O último candidato é o início da última seção que cabe INTEIRA (ou começa) na página.
-            // Se nós cortarmos em `splitAt`, vamos incluir o começo dessa seção e cortar o resto.
-            // O ideal é cortar EXATAMENTE no início dessa seção (candidates[candidates.length - 1]),
-            // para que ela fique toda na próxima página.
-            // EXCEÇÃO: Se cortar ali deixar a página muito vazia (ex: seção começa no topo), não adianta.
-
-            // Vamos pegar o último início de seção.
-            const lastSafeY = candidates[candidates.length - 1];
-
-            // Se recuarmos o corte para lastSafeY, quanto perdemos de página?
-            const lostSpace = splitAt - lastSafeY;
-
-            // Se perdemos menos que, digamos, 50% da página, vale a pena quebrar antes para não cortar a seção.
-            if (lostSpace < pageHeightPx * 0.6) {
-              sliceHeight = lastSafeY - currentY;
-            }
-          }
+        // Verifica se cabe na página atual
+        if (currentY + sectionHeight > pdfHeight - margin) {
+          pdf.addPage();
+          currentY = margin;
         }
 
-        // Criar um canvas temporário para essa fatia
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = imgWidth;
-        tempCanvas.height = sliceHeight;
-        const tempCtx = tempCanvas.getContext('2d');
-
-        if (tempCtx) {
-          tempCtx.drawImage(
-            canvas,
-            0, currentY, imgWidth, sliceHeight, // Source crop
-            0, 0, imgWidth, sliceHeight         // Dest pos
-          );
-
-          const sliceData = tempCanvas.toDataURL('image/png');
-
-          if (currentY > 0) pdf.addPage();
-
-          // Adiciona a imagem. A altura no PDF será proporcional.
-          // sliceHeight (px) -> pdfHeight (mm) ? Não.
-          // A largura é fixa (pdfWidth). A altura deve manter a proporção.
-          const pdfSliceHeight = sliceHeight * ratio;
-          pdf.addImage(sliceData, 'PNG', 0, 0, pdfWidth, pdfSliceHeight);
-        }
-
-        currentY += sliceHeight;
-
-        // Evitar loop infinito por precisão de float
-        if (sliceHeight < 1) break;
+        pdf.addImage(imgData, "PNG", margin, currentY, contentWidth, sectionHeight);
+        currentY += sectionHeight + 5; // +5mm de espaçamento entre seções
       }
 
       pdf.save(`Dieta_NexaNutri_${userData?.name || "Usuario"}.pdf`);
