@@ -1,8 +1,8 @@
 // Webhook configuration for meal analysis
 
 export const WEBHOOK_CONFIG = {
-    // URL do webhook - NexaApp
-    url: import.meta.env.VITE_MEAL_ANALYSIS_WEBHOOK_URL || 'https://webhook.nexaapp.online/webhook/nexaapp',
+    // URL do webhook - NexaApp (atualizado)
+    url: import.meta.env.VITE_MEAL_ANALYSIS_WEBHOOK_URL || 'https://webhook.nexaapp.online/webhook/fe75d6ee-4030-4147-a612-6b2c5f67cb2c',
 
     // Headers de autenticação
     headers: {
